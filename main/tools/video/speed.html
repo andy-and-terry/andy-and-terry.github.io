@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Video Speed — Video Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🎬 Video Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Change Video Speed</h1>
+  <p class="subtitle">Speed a clip up or slow it down. Audio pitch is corrected to match, not just sped up.</p>
+
+  <div class="card">
+    <h2>1. Choose a video</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose a video file">
+      <div><strong>Click to choose</strong> or drag a video file here</div>
+      <input type="file" id="file-input" accept="video/*" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <video id="preview" controls style="display:none"></video>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Set speed</h2>
+    <div class="field">
+      <label>Speed <span class="value-pill" id="speed-pill">1.00x</span></label>
+      <input type="range" id="speed-range" min="0.25" max="4" step="0.05" value="1" />
+      <div class="hint">0.25x = quarter speed (slow motion) · 4x = four times faster</div>
+    </div>
+    <div class="btn-row" style="margin-bottom:16px">
+      <button class="btn btn-secondary" data-speed="0.5" type="button">0.5x</button>
+      <button class="btn btn-secondary" data-speed="1" type="button">1x</button>
+      <button class="btn btn-secondary" data-speed="1.5" type="button">1.5x</button>
+      <button class="btn btn-secondary" data-speed="2" type="button">2x</button>
+      <button class="btn btn-secondary" data-speed="4" type="button">4x</button>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="mute-audio" /> Mute audio</label>
+    </div>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Apply speed change</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+    <details class="log" id="log-details">
+      <summary>ffmpeg log</summary>
+      <pre id="log-output"></pre>
+    </details>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <video id="output-preview" controls></video>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="lib/ffmpeg.js"></script>
+<script src="lib/ffmpeg-util.js"></script>
+<script src="nav.js"></script>
+<script>
+(function () {
+  "use strict";
+  const { FFmpeg } = FFmpegWASM;
+  const { fetchFile, toBlobURL } = FFmpegUtil;
+  const BASE_URL = "lib";
+
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("file-input");
+  const fileInfo = document.getElementById("file-info");
+  const fileNameEl = document.getElementById("file-name");
+  const fileSizeEl = document.getElementById("file-size");
+  const preview = document.getElementById("preview");
+  const controlsCard = document.getElementById("controls-card");
+  const speedRange = document.getElementById("speed-range");
+  const speedPill = document.getElementById("speed-pill");
+  const muteAudio = document.getElementById("mute-audio");
+  const outputName = document.getElementById("output-name");
+  const processBtn = document.getElementById("process-btn");
+  const statusLine = document.getElementById("status-line");
+  const progressTrack = document.getElementById("progress-track");
+  const progressFill = document.getElementById("progress-fill");
+  const errorBanner = document.getElementById("error-banner");
+  const logOutput = document.getElementById("log-output");
+  const outputCard = document.getElementById("output-card");
+  const outputPreview = document.getElementById("output-preview");
+  const outputSize = document.getElementById("output-size");
+  const downloadLink = document.getElementById("download-link");
+
+  let ffmpeg = null;
+  let coreLoaded = false;
+  let currentFile = null;
+  let previewURL = null;
+  let outputURL = null;
+  let busy = false;
+
+  function fmtBytes(b) {
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    return (b / (1024 * 1024)).toFixed(1) + " MB";
+  }
+  function setStatus(text, spinning) {
+    statusLine.innerHTML = "";
+    if (spinning) {
+      const s = document.createElement("div");
+      s.className = "spinner";
+      statusLine.appendChild(s);
+    }
+    const t = document.createElement("span");
+    t.textContent = text || "";
+    statusLine.appendChild(t);
+  }
+  function showError(msg) {
+    errorBanner.innerHTML = '<div class="banner banner-error">' + msg + "</div>";
+  }
+  function clearError() {
+    errorBanner.innerHTML = "";
+  }
+  function appendLog(msg) {
+    logOutput.textContent += msg + "\n";
+    logOutput.parentElement.scrollTop = logOutput.parentElement.scrollHeight;
+  }
+  function setProgress(fraction) {
+    if (fraction == null || !isFinite(fraction)) return;
+    const pct = Math.max(0, Math.min(100, fraction * 100));
+    progressTrack.style.display = "block";
+    progressFill.style.width = pct + "%";
+  }
+  function baseName(name) {
+    const dot = name.lastIndexOf(".");
+    return dot > 0 ? name.slice(0, dot) : name;
+  }
+  function extName(name) {
+    const dot = name.lastIndexOf(".");
+    return dot > 0 ? name.slice(dot + 1) : "mp4";
+  }
+  function resetOutput() {
+    outputCard.classList.remove("visible");
+    if (outputURL) {
+      URL.revokeObjectURL(outputURL);
+      outputURL = null;
+    }
+  }
+
+  // atempo only accepts 0.5-2.0, so reaching e.g. 4x needs it applied twice (2.0 * 2.0).
+  function atempoChain(factor) {
+    const steps = [];
+    let f = factor;
+    while (f > 2) {
+      steps.push(2);
+      f /= 2;
+    }
+    while (f < 0.5) {
+      steps.push(0.5);
+      f *= 2;
+    }
+    steps.push(f);
+    return steps.map((s) => "atempo=" + s.toFixed(3)).join(",");
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith("video/") && !/\.(mp4|mov|mkv|webm|avi|m4v|flv|wmv)$/i.test(file.name)) {
+      showError("That doesn't look like a video file.");
+      return;
+    }
+    clearError();
+    resetOutput();
+    currentFile = file;
+    if (previewURL) URL.revokeObjectURL(previewURL);
+    previewURL = URL.createObjectURL(file);
+    preview.src = previewURL;
+    preview.style.display = "block";
+    fileInfo.style.display = "flex";
+    fileNameEl.textContent = file.name;
+    fileSizeEl.textContent = fmtBytes(file.size);
+    outputName.value = baseName(file.name) + "-speed.mp4";
+    controlsCard.style.display = "block";
+    setStatus("");
+    logOutput.textContent = "";
+  }
+
+  function updateSpeedPill() {
+    speedPill.textContent = parseFloat(speedRange.value).toFixed(2) + "x";
+  }
+  speedRange.addEventListener("input", updateSpeedPill);
+  updateSpeedPill();
+
+  document.querySelectorAll("[data-speed]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      speedRange.value = btn.getAttribute("data-speed");
+      updateSpeedPill();
+    });
+  });
+
+  dropZone.addEventListener("click", function () {
+    fileInput.click();
+  });
+  dropZone.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") fileInput.click();
+  });
+  fileInput.addEventListener("change", function () {
+    handleFile(fileInput.files[0]);
+  });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+    });
+  });
+  dropZone.addEventListener("drop", function (e) {
+    handleFile(e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+
+  async function ensureFFmpeg() {
+    if (coreLoaded) return;
+    if (!ffmpeg) {
+      ffmpeg = new FFmpeg();
+      ffmpeg.on("log", function (e) {
+        appendLog(e.message);
+      });
+      ffmpeg.on("progress", function (e) {
+        setProgress(e.progress);
+      });
+    }
+    setStatus("Downloading ffmpeg engine (~30 MB, first run only)…", true);
+    try {
+      const coreURL = await toBlobURL(BASE_URL + "/ffmpeg-core.js", "text/javascript");
+      const wasmURL = await toBlobURL(BASE_URL + "/ffmpeg-core.wasm", "application/wasm", true, function (p) {
+        if (p.total > 0) setProgress(p.received / p.total);
+        setStatus("Downloading ffmpeg engine… " + fmtBytes(p.received) + (p.total > 0 ? " / " + fmtBytes(p.total) : ""), true);
+      });
+      await ffmpeg.load({ coreURL: coreURL, wasmURL: wasmURL });
+      coreLoaded = true;
+      progressTrack.style.display = "none";
+      progressFill.style.width = "0%";
+    } catch (err) {
+      throw new Error(
+        "Could not load the ffmpeg engine. Make sure the files in lib/ are present and you're serving this page over http(s), not file://. (" +
+          (err && err.message ? err.message : err) +
+          ")"
+      );
+    }
+  }
+
+  processBtn.addEventListener("click", async function () {
+    if (busy || !currentFile) return;
+    clearError();
+    resetOutput();
+    busy = true;
+    processBtn.disabled = true;
+    logOutput.textContent = "";
+    setProgress(0);
+
+    const inExt = extName(currentFile.name);
+    const inName = "input." + inExt;
+    const outName = "output.mp4";
+    const outNameValue = outputName.value.trim() || "output.mp4";
+    const factor = parseFloat(speedRange.value);
+
+    function buildArgs(withAudio) {
+      if (withAudio) {
+        return [
+          "-i",
+          inName,
+          "-filter_complex",
+          "[0:v]setpts=PTS/" + factor + "[v];[0:a]" + atempoChain(factor) + "[a]",
+          "-map",
+          "[v]",
+          "-map",
+          "[a]",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-crf",
+          "23",
+          "-c:a",
+          "aac",
+          "-movflags",
+          "+faststart",
+          outName,
+        ];
+      }
+      return [
+        "-i",
+        inName,
+        "-filter:v",
+        "setpts=PTS/" + factor,
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23",
+        "-movflags",
+        "+faststart",
+        outName,
+      ];
+    }
+
+    try {
+      await ensureFFmpeg();
+      setStatus("Writing file into engine…", true);
+      await ffmpeg.writeFile(inName, await fetchFile(currentFile));
+
+      setStatus("Processing…", true);
+      const wantAudio = !muteAudio.checked;
+      let ret = await ffmpeg.exec(buildArgs(wantAudio));
+      if (ret !== 0 && wantAudio) {
+        appendLog("(retrying without audio — the source clip likely has no audio track)");
+        try {
+          await ffmpeg.deleteFile(outName);
+        } catch (_) {}
+        setProgress(0);
+        ret = await ffmpeg.exec(buildArgs(false));
+      }
+      if (ret !== 0) {
+        throw new Error("ffmpeg exited with code " + ret + ". See the log below for details.");
+      }
+
+      const data = await ffmpeg.readFile(outName);
+      const blob = new Blob([data.buffer], { type: "video/mp4" });
+      outputURL = URL.createObjectURL(blob);
+      outputPreview.src = outputURL;
+      outputSize.textContent = fmtBytes(blob.size);
+      downloadLink.href = outputURL;
+      downloadLink.download = baseName(outNameValue) + ".mp4";
+      outputCard.classList.add("visible");
+      setStatus("Done.", false);
+      setProgress(1);
+
+      try {
+        await ffmpeg.deleteFile(inName);
+        await ffmpeg.deleteFile(outName);
+      } catch (_) {}
+    } catch (err) {
+      showError((err && err.message) || String(err));
+      setStatus("Failed.", false);
+    } finally {
+      busy = false;
+      processBtn.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>
