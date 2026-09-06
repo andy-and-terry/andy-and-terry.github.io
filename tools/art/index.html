@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Art Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧬 Art Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Art Toolkit</h1>
+  <p class="subtitle">
+    5 browser-based generative art tools, powered by p5.js. Everything runs locally in your tab —
+    no uploads, no accounts, no server. Every piece is seeded, so the same seed and parameters
+    always reproduce the same artwork. Pick a tool to get started.
+  </p>
+
+  <div class="tool-grid">
+    <a class="tool-card" href="flow-field.html">
+      <span class="icon">🌊</span>
+      <div class="name">Flow Field</div>
+      <div class="desc">Particles drift through a Perlin-noise vector field, leaving translucent trails.</div>
+    </a>
+    <a class="tool-card" href="particle-orbits.html">
+      <span class="icon">🪐</span>
+      <div class="name">Particle Orbits</div>
+      <div class="desc">Particles swing around a small system of gravity wells, tracing elliptical trails.</div>
+    </a>
+    <a class="tool-card" href="voronoi-cells.html">
+      <span class="icon">🔷</span>
+      <div class="name">Voronoi Cells</div>
+      <div class="desc">Random seed points tessellate into cells, relaxable into an even, organic tiling.</div>
+    </a>
+    <a class="tool-card" href="recursive-branches.html">
+      <span class="icon">🌿</span>
+      <div class="name">Recursive Branches</div>
+      <div class="desc">A branching structure grows from a trunk, splitting recursively with randomized angle.</div>
+    </a>
+    <a class="tool-card" href="wave-interference.html">
+      <span class="icon">💫</span>
+      <div class="name">Wave Interference</div>
+      <div class="desc">Circular waves from several point sources overlap into a rippling interference field.</div>
+    </a>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via p5.js. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+</body>
+</html>
