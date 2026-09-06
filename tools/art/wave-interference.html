@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wave Interference — Art Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧬 Art Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Wave Interference</h1>
+  <p class="subtitle">Circular waves from a handful of point sources overlap into a rippling interference field, like ripples crossing on water. Runs entirely in your browser.</p>
+
+  <div class="layout">
+    <div class="card canvas-card">
+      <div class="canvas-stage" id="canvas-container"></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Seed</h2>
+        <div class="field">
+          <label>Seed</label>
+          <div class="seed-row">
+            <input type="number" id="seed-input" min="0" step="1" value="1" />
+            <button class="btn btn-secondary btn-icon" id="shuffle-seed-btn" type="button" title="Random seed">🎲</button>
+          </div>
+          <div class="hint">Same seed and parameters always reproduce the same artwork.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="regenerate-btn" type="button">Regenerate</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Parameters</h2>
+
+        <div class="field">
+          <label>Wave Sources <span class="value-pill" id="sources-value">3</span></label>
+          <input type="range" id="sources-range" min="2" max="8" step="1" value="3" />
+        </div>
+
+        <div class="field">
+          <label>Wavelength <span class="value-pill" id="wavelength-value">22</span> px</label>
+          <input type="range" id="wavelength-range" min="5" max="60" step="1" value="22" />
+        </div>
+
+        <div class="field">
+          <label>Wave Speed <span class="value-pill" id="speed-value">1.2</span></label>
+          <input type="range" id="speed-range" min="0" max="5" step="0.1" value="1.2" />
+          <div class="hint">0 freezes the pattern at a single instant.</div>
+        </div>
+
+        <div class="field">
+          <label>Palette Hue <span class="value-pill" id="hue-value">190°</span></label>
+          <input type="range" id="hue-range" min="0" max="360" step="5" value="190" />
+        </div>
+
+        <div class="field">
+          <label>Hue Modulation <span class="value-pill" id="huemod-value">60°</span></label>
+          <input type="range" id="huemod-range" min="0" max="180" step="5" value="60" />
+          <div class="hint">How much interference amplitude shifts the hue.</div>
+        </div>
+
+        <div class="field">
+          <label>Detail <span class="value-pill" id="resolution-value">200</span> px</label>
+          <input type="range" id="resolution-range" min="100" max="320" step="20" value="200" />
+          <div class="hint">Internal simulation resolution. Higher is crisper but slower.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Export</h2>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="download-btn" type="button">Download PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via p5.js. No files leave your device.</footer>
+
+<script src="lib/p5.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/wave-interference.js"></script>
+</body>
+</html>

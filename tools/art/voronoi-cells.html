@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Voronoi Cells — Art Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧬 Art Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Voronoi Cells</h1>
+  <p class="subtitle">Random seed points tessellate the canvas into cells of nearest-neighbor territory, optionally relaxed toward an even, soap-bubble arrangement. Runs entirely in your browser.</p>
+
+  <div class="layout">
+    <div class="card canvas-card">
+      <div class="canvas-stage" id="canvas-container"></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Seed</h2>
+        <div class="field">
+          <label>Seed</label>
+          <div class="seed-row">
+            <input type="number" id="seed-input" min="0" step="1" value="1" />
+            <button class="btn btn-secondary btn-icon" id="shuffle-seed-btn" type="button" title="Random seed">🎲</button>
+          </div>
+          <div class="hint">Same seed and parameters always reproduce the same artwork.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="regenerate-btn" type="button">Regenerate</button>
+        </div>
+        <div class="status-hint hint" id="compute-status" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <h2>Parameters</h2>
+
+        <div class="field">
+          <label>Cell Count <span class="value-pill" id="cells-value">40</span></label>
+          <input type="range" id="cells-range" min="8" max="150" step="1" value="40" />
+        </div>
+
+        <div class="field">
+          <label>Relaxation Steps <span class="value-pill" id="relax-value">3</span></label>
+          <input type="range" id="relax-range" min="0" max="8" step="1" value="3" />
+          <div class="hint">Iteratively moves each seed toward its cell's centroid for a more even, organic tiling. 0 keeps the raw random scatter.</div>
+        </div>
+
+        <div class="field">
+          <label>Detail <span class="value-pill" id="resolution-value">4px</span></label>
+          <input type="range" id="resolution-range" min="2" max="10" step="1" value="4" />
+          <div class="hint">Grid cell size used to approximate the diagram. Lower is crisper but slower to compute.</div>
+        </div>
+
+        <div class="field">
+          <label>Border Width <span class="value-pill" id="border-value">1.5</span> px</label>
+          <input type="range" id="border-range" min="0" max="4" step="0.5" value="1.5" />
+        </div>
+
+        <div class="field">
+          <label>Palette Hue <span class="value-pill" id="hue-value">200°</span></label>
+          <input type="range" id="hue-range" min="0" max="360" step="5" value="200" />
+        </div>
+
+        <div class="field">
+          <label>Hue Spread <span class="value-pill" id="spread-value">260°</span></label>
+          <input type="range" id="spread-range" min="0" max="360" step="5" value="260" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Export</h2>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="download-btn" type="button">Download PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via p5.js. No files leave your device.</footer>
+
+<script src="lib/p5.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/voronoi-cells.js"></script>
+</body>
+</html>
