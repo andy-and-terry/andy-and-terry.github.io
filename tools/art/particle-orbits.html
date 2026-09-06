@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Particle Orbits — Art Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧬 Art Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Particle Orbits</h1>
+  <p class="subtitle">Particles swing around a small system of gravity wells, tracing elliptical trails. Runs entirely in your browser — nothing uploads anywhere.</p>
+
+  <div class="layout">
+    <div class="card canvas-card">
+      <div class="canvas-stage" id="canvas-container"></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Seed</h2>
+        <div class="field">
+          <label>Seed</label>
+          <div class="seed-row">
+            <input type="number" id="seed-input" min="0" step="1" value="1" />
+            <button class="btn btn-secondary btn-icon" id="shuffle-seed-btn" type="button" title="Random seed">🎲</button>
+          </div>
+          <div class="hint">Same seed and parameters always reproduce the same artwork.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="regenerate-btn" type="button">Regenerate</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Parameters</h2>
+
+        <div class="field">
+          <label>Particle Count <span class="value-pill" id="count-value">300</span></label>
+          <input type="range" id="count-range" min="50" max="800" step="10" value="300" />
+        </div>
+
+        <div class="field">
+          <label>Attractors <span class="value-pill" id="attractors-value">3</span></label>
+          <input type="range" id="attractors-range" min="1" max="6" step="1" value="3" />
+        </div>
+
+        <div class="field">
+          <label>Gravity <span class="value-pill" id="gravity-value">1.0</span></label>
+          <input type="range" id="gravity-range" min="0.2" max="3" step="0.1" value="1" />
+          <div class="hint">Strength of pull toward each attractor.</div>
+        </div>
+
+        <div class="field">
+          <label>Orbit Speed <span class="value-pill" id="orbitspeed-value">1.0</span></label>
+          <input type="range" id="orbitspeed-range" min="0.2" max="2.5" step="0.1" value="1" />
+          <div class="hint">Initial tangential velocity of each particle.</div>
+        </div>
+
+        <div class="field">
+          <label>Trail Fade <span class="value-pill" id="fade-value">10</span></label>
+          <input type="range" id="fade-range" min="1" max="40" step="1" value="10" />
+          <div class="hint">Lower values leave longer, more persistent trails.</div>
+        </div>
+
+        <div class="field">
+          <label>Palette Hue <span class="value-pill" id="hue-value">280°</span></label>
+          <input type="range" id="hue-range" min="0" max="360" step="5" value="280" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Export</h2>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="download-btn" type="button">Download PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via p5.js. No files leave your device.</footer>
+
+<script src="lib/p5.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/particle-orbits.js"></script>
+</body>
+</html>
