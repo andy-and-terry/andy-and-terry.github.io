@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flow Field — Art Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧬 Art Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Flow Field</h1>
+  <p class="subtitle">Particles drift through a Perlin-noise vector field, leaving translucent trails. Runs entirely in your browser — nothing uploads anywhere.</p>
+
+  <div class="layout">
+    <div class="card canvas-card">
+      <div class="canvas-stage" id="canvas-container"></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Seed</h2>
+        <div class="field">
+          <label>Seed</label>
+          <div class="seed-row">
+            <input type="number" id="seed-input" min="0" step="1" value="1" />
+            <button class="btn btn-secondary btn-icon" id="shuffle-seed-btn" type="button" title="Random seed">🎲</button>
+          </div>
+          <div class="hint">Same seed and parameters always reproduce the same artwork.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="regenerate-btn" type="button">Regenerate</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Parameters</h2>
+
+        <div class="field">
+          <label>Particle Count <span class="value-pill" id="count-value">1600</span></label>
+          <input type="range" id="count-range" min="200" max="4000" step="100" value="1600" />
+        </div>
+
+        <div class="field">
+          <label>Noise Scale <span class="value-pill" id="scale-value">0.0040</span></label>
+          <input type="range" id="scale-range" min="0.001" max="0.02" step="0.0005" value="0.004" />
+          <div class="hint">Smaller values produce larger, smoother swirls.</div>
+        </div>
+
+        <div class="field">
+          <label>Turbulence <span class="value-pill" id="turbulence-value">3.0</span></label>
+          <input type="range" id="turbulence-range" min="0.5" max="6" step="0.1" value="3" />
+          <div class="hint">How many full rotations the field can turn through.</div>
+        </div>
+
+        <div class="field">
+          <label>Speed <span class="value-pill" id="speed-value">1.5</span> px/frame</label>
+          <input type="range" id="speed-range" min="0.3" max="4" step="0.1" value="1.5" />
+        </div>
+
+        <div class="field">
+          <label>Trail Fade <span class="value-pill" id="fade-value">6</span></label>
+          <input type="range" id="fade-range" min="1" max="40" step="1" value="6" />
+          <div class="hint">Lower values leave longer, more persistent trails.</div>
+        </div>
+
+        <div class="field">
+          <label>Palette Hue <span class="value-pill" id="hue-value">210°</span></label>
+          <input type="range" id="hue-range" min="0" max="360" step="5" value="210" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Export</h2>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-block" id="download-btn" type="button">Download PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via p5.js. No files leave your device.</footer>
+
+<script src="lib/p5.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/flow-field.js"></script>
+</body>
+</html>
