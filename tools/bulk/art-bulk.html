@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Art Bulk — Bulk Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📦 Bulk Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Art Bulk</h1>
+  <p class="subtitle">
+    Generate a grid of algorithmic art variations. Each one is rendered by the actual
+    <a href="../art/index.html">Art Toolkit</a> page for that algorithm — nothing here reimplements
+    the drawing code, it just drives the real "Regenerate" button with a different seed each time.
+  </p>
+
+  <div class="card">
+    <h2>1. Settings</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Algorithm</label>
+        <select id="algo-select">
+          <option value="flow-field">Flow Field</option>
+          <option value="particle-orbits">Particle Orbits</option>
+          <option value="voronoi-cells">Voronoi Cells</option>
+          <option value="recursive-branches">Recursive Branches</option>
+          <option value="wave-interference">Wave Interference</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Variations</label>
+        <input type="number" id="count-input" min="1" max="60" step="1" value="12" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Seed mode</label>
+        <select id="seed-mode-select">
+          <option value="random" selected>Random</option>
+          <option value="incrementing">Incrementing</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Start seed <span class="hint">(incrementing mode)</span></label>
+        <input type="number" id="start-seed-input" min="0" step="1" value="1" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="generate-btn" type="button">Generate</button>
+      <button class="btn btn-secondary" id="download-zip-btn" type="button" style="display: none">
+        Download all as ZIP
+      </button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card" id="results-card" style="display: none">
+    <h2>2. Results</h2>
+    <div class="queue-summary" id="queue-summary"></div>
+    <div class="result-grid" id="result-grid"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via p5.js. No files leave your device.</footer>
+
+<script src="lib/jszip.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/bulk-common.js"></script>
+<script src="../art/js/common.js"></script>
+<script src="js/art-ops.js"></script>
+<script src="js/art-bulk.js"></script>
+</body>
+</html>
