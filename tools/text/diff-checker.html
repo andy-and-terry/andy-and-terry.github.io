@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Diff Checker</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="../index.html">🧰 Text Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Diff Checker</h1>
+  <p class="subtitle">Compare two blocks of text with live line- and word-level highlighting. Runs entirely in your browser.</p>
+
+  <div class="card">
+    <h2>Input</h2>
+    <div class="split-cols">
+      <div class="field">
+        <label for="before">Before</label>
+        <textarea id="before" rows="10" spellcheck="false" placeholder="Paste the original text here"></textarea>
+      </div>
+      <div class="field">
+        <label for="after">After</label>
+        <textarea id="after" rows="10" spellcheck="false" placeholder="Paste the changed text here"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim)">
+        <input type="checkbox" id="word-mode" checked /> Word-level highlighting (within changed lines)
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field-label-row">
+      <h2 style="margin:0">Diff</h2>
+      <span class="hint" id="diff-summary"></span>
+    </div>
+    <div class="diff-pane" id="diff-output"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs entirely in your browser. Nothing you type is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/diff-checker.js"></script>
+</body>
+</html>
