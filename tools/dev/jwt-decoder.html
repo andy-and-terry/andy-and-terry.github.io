@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JWT Decoder — Dev Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🛠️ Dev Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>JWT Decoder</h1>
+  <p class="subtitle">
+    Paste a JSON Web Token to decode its header and payload. Everything runs locally in your
+    browser — the token never leaves your device.
+  </p>
+
+  <div class="card">
+    <h2>1. Token</h2>
+    <div class="field">
+      <label for="jwt-input">JWT</label>
+      <textarea
+        id="jwt-input"
+        rows="6"
+        spellcheck="false"
+        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+      ></textarea>
+    </div>
+    <div id="parse-error"></div>
+  </div>
+
+  <div class="banner banner-warning">
+    This tool only decodes the token — it does <strong>not</strong> verify the signature. A
+    decoded, well-formed token is not proof it was issued by anyone trustworthy or that it hasn't
+    been tampered with.
+  </div>
+
+  <div class="card output-card" id="expiry-card">
+    <h2>2. Expiry</h2>
+    <div id="expiry-banner"></div>
+  </div>
+
+  <div class="card output-card" id="header-card">
+    <h2>3. Header</h2>
+    <div class="output-block">
+      <pre id="header-output"></pre>
+      <button class="copy-btn" data-copy-target="header-output" type="button">Copy</button>
+    </div>
+  </div>
+
+  <div class="card output-card" id="payload-card">
+    <h2>4. Payload</h2>
+    <div class="output-block">
+      <pre id="payload-output"></pre>
+      <button class="copy-btn" data-copy-target="payload-output" type="button">Copy</button>
+    </div>
+    <div id="claims-table-wrap"></div>
+  </div>
+
+  <div class="card output-card" id="signature-card">
+    <h2>5. Signature</h2>
+    <p class="hint">Raw signature segment, base64url-encoded. Shown as-is — not verified.</p>
+    <div class="output-block">
+      <pre id="signature-output"></pre>
+      <button class="copy-btn" data-copy-target="signature-output" type="button">Copy</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No tokens leave your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var input = document.getElementById("jwt-input");
+  var parseError = document.getElementById("parse-error");
+  var expiryCard = document.getElementById("expiry-card");
+  var expiryBanner = document.getElementById("expiry-banner");
+  var headerCard = document.getElementById("header-card");
+  var headerOutput = document.getElementById("header-output");
+  var payloadCard = document.getElementById("payload-card");
+  var payloadOutput = document.getElementById("payload-output");
+  var claimsWrap = document.getElementById("claims-table-wrap");
+  var signatureCard = document.getElementById("signature-card");
+  var signatureOutput = document.getElementById("signature-output");
+
+  var KNOWN_CLAIMS = {
+    iss: "Issuer",
+    sub: "Subject",
+    aud: "Audience",
+    exp: "Expires at",
+    nbf: "Not before",
+    iat: "Issued at",
+    jti: "JWT ID",
+  };
+
+  function base64UrlDecode(segment) {
+    var str = segment.replace(/-/g, "+").replace(/_/g, "/");
+    var pad = str.length % 4;
+    if (pad === 2) str += "==";
+    else if (pad === 3) str += "=";
+    else if (pad !== 0) throw new Error("Invalid base64url segment length");
+    var binary = atob(str);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  }
+
+  function formatTimestamp(seconds) {
+    if (typeof seconds !== "number" || !isFinite(seconds)) return null;
+    var d = new Date(seconds * 1000);
+    var nowSec = Date.now() / 1000;
+    var diff = seconds - nowSec;
+    var abs = Math.abs(diff);
+    var unit, value;
+    if (abs < 60) {
+      unit = "second";
+      value = abs;
+    } else if (abs < 3600) {
+      unit = "minute";
+      value = abs / 60;
+    } else if (abs < 86400) {
+      unit = "hour";
+      value = abs / 3600;
+    } else {
+      unit = "day";
+      value = abs / 86400;
+    }
+    value = Math.round(value);
+    if (value !== 1) unit += "s";
+    var rel = diff >= 0 ? "in " + value + " " + unit : value + " " + unit + " ago";
+    return d.toLocaleString() + " (" + rel + ")";
+  }
+
+  function setVisible(el, visible) {
+    el.classList.toggle("visible", !!visible);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderClaimsTable(payload) {
+    var rows = [];
+    Object.keys(KNOWN_CLAIMS).forEach(function (key) {
+      if (!(key in payload)) return;
+      var raw = payload[key];
+      var display = raw;
+      if ((key === "exp" || key === "nbf" || key === "iat") && typeof raw === "number") {
+        display = formatTimestamp(raw) || String(raw);
+      } else if (typeof raw === "object") {
+        display = JSON.stringify(raw);
+      }
+      rows.push(
+        "<tr><td>" +
+          escapeHtml(KNOWN_CLAIMS[key]) +
+          '</td><td class="mono">' +
+          escapeHtml(key) +
+          '</td><td class="mono">' +
+          escapeHtml(display) +
+          "</td></tr>"
+      );
+    });
+    if (!rows.length) {
+      claimsWrap.innerHTML = "";
+      return;
+    }
+    claimsWrap.innerHTML =
+      '<table class="data-table"><thead><tr><th>Claim</th><th>Key</th><th>Value</th></tr></thead><tbody>' +
+      rows.join("") +
+      "</tbody></table>";
+  }
+
+  function renderExpiry(payload) {
+    var hasExp = typeof payload.exp === "number";
+    var hasNbf = typeof payload.nbf === "number";
+    if (!hasExp && !hasNbf) {
+      setVisible(expiryCard, false);
+      return;
+    }
+    setVisible(expiryCard, true);
+    var nowSec = Date.now() / 1000;
+    var parts = [];
+    var cls = "banner-success";
+    if (hasNbf && payload.nbf > nowSec) {
+      cls = "banner-warning";
+      parts.push("Not yet valid — becomes active " + formatTimestamp(payload.nbf) + ".");
+    }
+    if (hasExp) {
+      if (payload.exp <= nowSec) {
+        cls = "banner-error";
+        parts.push("Expired " + formatTimestamp(payload.exp) + ".");
+      } else {
+        parts.push("Valid until " + formatTimestamp(payload.exp) + ".");
+      }
+    } else {
+      parts.push("Token has no expiry (exp) claim — it never expires.");
+    }
+    expiryBanner.innerHTML = '<div class="banner ' + cls + '">' + escapeHtml(parts.join(" ")) + "</div>";
+  }
+
+  function showError(message) {
+    parseError.innerHTML = '<div class="banner banner-error">' + escapeHtml(message) + "</div>";
+    [expiryCard, headerCard, payloadCard, signatureCard].forEach(function (c) {
+      setVisible(c, false);
+    });
+  }
+
+  function decode() {
+    var token = input.value.trim();
+    parseError.innerHTML = "";
+    if (!token) {
+      [expiryCard, headerCard, payloadCard, signatureCard].forEach(function (c) {
+        setVisible(c, false);
+      });
+      return;
+    }
+
+    var parts = token.split(".");
+    if (parts.length !== 3) {
+      showError(
+        "Not a valid JWT: expected 3 dot-separated segments (header.payload.signature), found " +
+          parts.length +
+          "."
+      );
+      return;
+    }
+    if (parts.some(function (p) { return p.length === 0; })) {
+      showError("Not a valid JWT: one or more segments are empty.");
+      return;
+    }
+
+    var headerJson, payloadJson, header, payload;
+    try {
+      headerJson = base64UrlDecode(parts[0]);
+      header = JSON.parse(headerJson);
+    } catch (e) {
+      showError("Could not decode header: " + e.message);
+      return;
+    }
+    try {
+      payloadJson = base64UrlDecode(parts[1]);
+      payload = JSON.parse(payloadJson);
+    } catch (e) {
+      showError("Could not decode payload: " + e.message);
+      return;
+    }
+
+    headerOutput.textContent = JSON.stringify(header, null, 2);
+    payloadOutput.textContent = JSON.stringify(payload, null, 2);
+    signatureOutput.textContent = parts[2];
+
+    setVisible(headerCard, true);
+    setVisible(payloadCard, true);
+    setVisible(signatureCard, true);
+
+    if (header && header.alg === "none") {
+      parseError.innerHTML =
+        '<div class="banner banner-warning">Header declares <span class="value-pill">alg: none</span> — this token type carries no signature at all.</div>';
+    }
+
+    renderClaimsTable(payload && typeof payload === "object" ? payload : {});
+    renderExpiry(payload && typeof payload === "object" ? payload : {});
+  }
+
+  input.addEventListener("input", decode);
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    var target = document.getElementById(btn.getAttribute("data-copy-target"));
+    if (!target) return;
+    var text = target.textContent;
+    navigator.clipboard.writeText(text).then(function () {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1200);
+    });
+  });
+
+  decode();
+})();
+</script>
+</body>
+</html>

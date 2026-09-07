@@ -3,84 +3,63 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Andy &amp; Terry</title>
-<style>
-  :root { color-scheme: light dark; }
-  body {
-    margin: 0;
-    font-family: system-ui, sans-serif;
-    background: #0f1115;
-    color: #e6e6e6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-  }
-  main { max-width: 640px; padding: 2rem; text-align: center; }
-  h1 { margin-bottom: 0.25rem; }
-  .subtitle { color: #9aa0a6; margin-top: 0; margin-bottom: 2rem; }
-  .tool-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-  }
-  .tool-card {
-    display: block;
-    padding: 1.5rem 1rem;
-    border-radius: 12px;
-    background: #1a1d24;
-    border: 1px solid #2a2e37;
-    text-decoration: none;
-    color: inherit;
-    transition: border-color 0.15s, transform 0.15s;
-  }
-  .tool-card:hover { border-color: #4a90e2; transform: translateY(-2px); }
-  .icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
-  .name { font-weight: 600; margin-bottom: 0.25rem; }
-  .desc { font-size: 0.85rem; color: #9aa0a6; }
-</style>
+<title>Andy &amp; Terry's Toolkits</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
+<header class="site-header">
+  <h1>🧑‍💻 Andy &amp; Terry's Toolkits</h1>
+  <p class="subtitle">
+    Browser-based tools, organized by category. Everything runs locally in your tab — no
+    uploads, no accounts, no server.
+  </p>
+</header>
+
 <main>
-  <h1>Andy &amp; Terry</h1>
-  <p class="subtitle">Browser-based toolkits. Everything runs locally — no uploads, no accounts.</p>
-  <div class="tool-grid">
-    <a class="tool-card" href="tools/art/index.html">
-      <span class="icon">🧬</span>
-      <div class="name">Art Toolkit</div>
-      <div class="desc">Generative art tools powered by p5.js.</div>
-    </a>
-    <a class="tool-card" href="tools/video/index.html">
+  <div class="category-grid">
+    <a class="category-card" href="tools/video/index.html">
       <span class="icon">🎬</span>
       <div class="name">Video Toolkit</div>
-      <div class="desc">Video editing tools powered by ffmpeg.wasm.</div>
+      <div class="desc">Trim, compress, merge, and edit video with ffmpeg.wasm.</div>
     </a>
-    <a class="tool-card" href="tools/image/index.html">
+    <a class="category-card" href="tools/art/index.html">
+      <span class="icon">🧬</span>
+      <div class="name">Art Toolkit</div>
+      <div class="desc">Generative art: flow fields, particle orbits, Voronoi cells, and more.</div>
+    </a>
+    <a class="category-card" href="tools/image/index.html">
       <span class="icon">🖼️</span>
       <div class="name">Image Toolkit</div>
-      <div class="desc">Browser-based image editing tools.</div>
+      <div class="desc">Resize, convert, crop, watermark, and remove backgrounds.</div>
     </a>
-    <a class="tool-card" href="tools/text/index.html">
-      <span class="icon">🧰</span>
+    <a class="category-card" href="tools/text/index.html">
+      <span class="icon">📝</span>
       <div class="name">Text Toolkit</div>
-      <div class="desc">Browser-based text and dev tools.</div>
+      <div class="desc">Text formatting, diffing, and other plain-text utilities.</div>
     </a>
-    <a class="tool-card" href="tools/audio/index.html">
-      <span class="icon">🎧</span>
+    <a class="category-card" href="tools/audio/index.html">
+      <span class="icon">🎵</span>
       <div class="name">Audio Toolkit</div>
-      <div class="desc">Audio editing tools powered by ffmpeg.wasm.</div>
+      <div class="desc">Trim, convert, and process audio files.</div>
     </a>
-    <a class="tool-card" href="tools/media-extra/index.html">
-      <span class="icon">🧪</span>
-      <div class="name">Media Extras</div>
-      <div class="desc">GIF maker, audio extractor, screen recorder, and more.</div>
+    <a class="category-card" href="tools/misc/index.html">
+      <span class="icon">🧰</span>
+      <div class="name">Misc Toolkit</div>
+      <div class="desc">QR codes, barcodes, color tools, unit conversion, passwords, timestamps.</div>
     </a>
-    <a class="tool-card" href="tools/productivity/index.html">
+    <a class="category-card" href="tools/dev/index.html">
+      <span class="icon">🛠️</span>
+      <div class="name">Dev Toolkit</div>
+      <div class="desc">Browser-based dev/network tools.</div>
+    </a>
+    <a class="category-card" href="tools/productivity/index.html">
       <span class="icon">✅</span>
       <div class="name">Productivity Toolkit</div>
       <div class="desc">Pomodoro, kanban, habits, timers, and a random picker.</div>
     </a>
   </div>
 </main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
 </body>
 </html>

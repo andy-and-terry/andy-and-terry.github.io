@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CSS Gradient Generator — Dev Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .gradient-preview {
+    width: 100%;
+    height: 220px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background-image: linear-gradient(90deg, #7c8cff 0%, #34d399 100%);
+  }
+  .stop-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .stop-row input[type="color"] {
+    flex-shrink: 0;
+  }
+  .stop-row .pos-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 110px;
+    flex-shrink: 0;
+  }
+  .stop-row .pos-field input {
+    width: 70px;
+  }
+  .stop-row .hex-field {
+    flex: 1;
+    min-width: 90px;
+  }
+  .stop-row button.remove {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 8px;
+    flex-shrink: 0;
+  }
+  .stop-row button.remove:hover {
+    color: var(--error);
+  }
+  .stop-row button.remove:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🛠️ Dev Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>CSS Gradient Generator</h1>
+  <p class="subtitle">Build a linear, radial, or conic gradient visually and copy the CSS.</p>
+
+  <div class="card">
+    <h2>1. Type</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="type-select">Gradient type</label>
+        <select id="type-select">
+          <option value="linear">Linear</option>
+          <option value="radial">Radial</option>
+          <option value="conic">Conic</option>
+        </select>
+      </div>
+      <div class="field" id="angle-field">
+        <label for="angle-input">Angle: <span class="value-pill" id="angle-value">90deg</span></label>
+        <input type="range" id="angle-input" min="0" max="360" value="90" />
+      </div>
+      <div class="field" id="shape-field" style="display:none">
+        <label for="shape-select">Shape</label>
+        <select id="shape-select">
+          <option value="circle">Circle</option>
+          <option value="ellipse" selected>Ellipse</option>
+        </select>
+      </div>
+      <div class="field" id="position-field" style="display:none">
+        <label for="position-select">Position</label>
+        <select id="position-select">
+          <option value="center">Center</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+          <option value="top left">Top left</option>
+          <option value="top right">Top right</option>
+          <option value="bottom left">Bottom left</option>
+          <option value="bottom right">Bottom right</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Color stops</h2>
+    <div id="stops-list"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="add-stop" type="button">+ Add stop</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Preview</h2>
+    <div class="gradient-preview" id="preview"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. CSS</h2>
+    <div class="output-block">
+      <pre id="css-output"></pre>
+      <button class="copy-btn" data-copy-target="css-output" type="button">Copy</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. Nothing is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var typeSelect = document.getElementById("type-select");
+  var angleField = document.getElementById("angle-field");
+  var angleInput = document.getElementById("angle-input");
+  var angleValue = document.getElementById("angle-value");
+  var shapeField = document.getElementById("shape-field");
+  var shapeSelect = document.getElementById("shape-select");
+  var positionField = document.getElementById("position-field");
+  var positionSelect = document.getElementById("position-select");
+  var stopsList = document.getElementById("stops-list");
+  var addStopBtn = document.getElementById("add-stop");
+  var preview = document.getElementById("preview");
+  var cssOutput = document.getElementById("css-output");
+
+  var stops = [
+    { color: "#7c8cff", position: 0 },
+    { color: "#34d399", position: 100 },
+  ];
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderStops() {
+    stopsList.innerHTML = stops
+      .map(function (stop, i) {
+        return (
+          '<div class="stop-row" data-index="' +
+          i +
+          '"><input type="color" class="stop-color" value="' +
+          stop.color +
+          '" aria-label="Stop ' +
+          (i + 1) +
+          ' color" />' +
+          '<input type="text" class="stop-hex hex-field" value="' +
+          escapeHtml(stop.color) +
+          '" aria-label="Stop ' +
+          (i + 1) +
+          ' hex value" />' +
+          '<div class="pos-field"><input type="number" class="stop-pos" min="0" max="100" value="' +
+          stop.position +
+          '" aria-label="Stop ' +
+          (i + 1) +
+          ' position" />%</div>' +
+          '<button type="button" class="remove" data-action="remove"' +
+          (stops.length <= 2 ? " disabled" : "") +
+          ' aria-label="Remove stop ' +
+          (i + 1) +
+          '">&times;</button></div>'
+        );
+      })
+      .join("");
+  }
+
+  function isValidHex(v) {
+    return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
+  }
+
+  function normalizeHex(v) {
+    var t = v.trim();
+    if (/^#[0-9a-f]{3}$/i.test(t)) {
+      return "#" + t[1] + t[1] + t[2] + t[2] + t[3] + t[3];
+    }
+    return t.toLowerCase();
+  }
+
+  function buildGradientBody() {
+    var sorted = stops.slice().sort(function (a, b) { return a.position - b.position; });
+    return sorted.map(function (s) { return s.color + " " + s.position + "%"; }).join(", ");
+  }
+
+  function buildGradient() {
+    var type = typeSelect.value;
+    var body = buildGradientBody();
+    if (type === "linear") {
+      return "linear-gradient(" + angleInput.value + "deg, " + body + ")";
+    }
+    if (type === "radial") {
+      return "radial-gradient(" + shapeSelect.value + " at " + positionSelect.value + ", " + body + ")";
+    }
+    return "conic-gradient(from " + angleInput.value + "deg at " + positionSelect.value + ", " + body + ")";
+  }
+
+  function update() {
+    var type = typeSelect.value;
+    angleField.style.display = type === "linear" || type === "conic" ? "" : "none";
+    shapeField.style.display = type === "radial" ? "" : "none";
+    positionField.style.display = type === "radial" || type === "conic" ? "" : "none";
+    angleValue.textContent = angleInput.value + "deg";
+
+    var gradient = buildGradient();
+    preview.style.backgroundImage = gradient;
+    cssOutput.textContent = "background: " + gradient + ";";
+  }
+
+  stopsList.addEventListener("input", function (e) {
+    var row = e.target.closest(".stop-row");
+    if (!row) return;
+    var index = parseInt(row.getAttribute("data-index"), 10);
+    if (e.target.classList.contains("stop-color")) {
+      stops[index].color = e.target.value;
+      row.querySelector(".stop-hex").value = e.target.value;
+      update();
+    } else if (e.target.classList.contains("stop-hex")) {
+      var v = e.target.value;
+      if (isValidHex(v)) {
+        var normalized = normalizeHex(v);
+        stops[index].color = normalized;
+        row.querySelector(".stop-color").value = normalized;
+        update();
+      }
+    } else if (e.target.classList.contains("stop-pos")) {
+      var pos = parseInt(e.target.value, 10);
+      if (Number.isFinite(pos)) {
+        stops[index].position = Math.min(100, Math.max(0, pos));
+        update();
+      }
+    }
+  });
+
+  stopsList.addEventListener("click", function (e) {
+    var btn = e.target.closest('[data-action="remove"]');
+    if (!btn) return;
+    var row = e.target.closest(".stop-row");
+    var index = parseInt(row.getAttribute("data-index"), 10);
+    if (stops.length <= 2) return;
+    stops.splice(index, 1);
+    renderStops();
+    update();
+  });
+
+  addStopBtn.addEventListener("click", function () {
+    var lastPos = stops.length ? stops[stops.length - 1].position : 100;
+    var newPos = Math.min(100, lastPos);
+    stops.push({ color: "#ffffff", position: newPos });
+    renderStops();
+    update();
+  });
+
+  typeSelect.addEventListener("change", update);
+  angleInput.addEventListener("input", update);
+  shapeSelect.addEventListener("change", update);
+  positionSelect.addEventListener("change", update);
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    var target = document.getElementById(btn.getAttribute("data-copy-target"));
+    if (!target) return;
+    navigator.clipboard.writeText(target.textContent).then(function () {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1200);
+    });
+  });
+
+  renderStops();
+  update();
+})();
+</script>
+</body>
+</html>

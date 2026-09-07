@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Markdown Table Generator — Dev Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .grid-wrap {
+    overflow-x: auto;
+    margin-bottom: 14px;
+  }
+  table.builder {
+    border-collapse: collapse;
+  }
+  table.builder td {
+    padding: 3px;
+  }
+  table.builder input[type="text"] {
+    width: 140px;
+  }
+  table.builder select {
+    width: 140px;
+    font-size: 12px;
+    padding: 5px 6px;
+  }
+  table.builder tr.header-row input {
+    font-weight: 600;
+    border-color: var(--accent);
+  }
+  .row-remove {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 6px;
+  }
+  .row-remove:hover {
+    color: var(--error);
+  }
+  .csv-panel,
+  .grid-panel {
+    display: none;
+  }
+  .csv-panel.active,
+  .grid-panel.active {
+    display: block;
+  }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🛠️ Dev Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Markdown Table Generator</h1>
+  <p class="subtitle">Build a table by hand or paste CSV, then copy the generated Markdown.</p>
+
+  <div class="card">
+    <h2>1. Input</h2>
+    <div class="chip-grid" style="margin-bottom:16px">
+      <button type="button" class="chip selected" id="tab-visual">Visual builder</button>
+      <button type="button" class="chip" id="tab-csv">Paste CSV</button>
+    </div>
+
+    <div class="grid-panel active" id="grid-panel">
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-secondary btn-sm" id="add-row" type="button">+ Row</button>
+        <button class="btn btn-secondary btn-sm" id="add-col" type="button">+ Column</button>
+        <button class="btn btn-secondary btn-sm" id="remove-row" type="button">- Row</button>
+        <button class="btn btn-secondary btn-sm" id="remove-col" type="button">- Column</button>
+        <label style="font-size:13px; color:var(--text-dim); display:flex; align-items:center; margin-left:8px">
+          <input type="checkbox" id="has-header" checked /> First row is header
+        </label>
+      </div>
+      <div class="grid-wrap">
+        <table class="builder" id="grid-table"></table>
+      </div>
+      <div class="hint">Alignment selects apply to each column's Markdown alignment (left/center/right).</div>
+    </div>
+
+    <div class="csv-panel" id="csv-panel">
+      <div class="field-row">
+        <div class="field">
+          <label for="delimiter">Delimiter</label>
+          <select id="delimiter">
+            <option value="auto">Auto-detect</option>
+            <option value=",">Comma (,)</option>
+            <option value="	">Tab</option>
+            <option value=";">Semicolon (;)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="csv-input">CSV text</label>
+        <textarea id="csv-input" rows="8" spellcheck="false" placeholder="Name,Age,City&#10;Ada,32,London&#10;Grace,36,New York"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="load-csv" type="button">Load into table</button>
+      </div>
+      <div id="csv-error"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Markdown output</h2>
+    <div class="output-block">
+      <pre id="md-output"></pre>
+      <button class="copy-btn" data-copy-target="md-output" type="button">Copy</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. Nothing is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var tabVisual = document.getElementById("tab-visual");
+  var tabCsv = document.getElementById("tab-csv");
+  var gridPanel = document.getElementById("grid-panel");
+  var csvPanel = document.getElementById("csv-panel");
+
+  var addRowBtn = document.getElementById("add-row");
+  var addColBtn = document.getElementById("add-col");
+  var removeRowBtn = document.getElementById("remove-row");
+  var removeColBtn = document.getElementById("remove-col");
+  var hasHeaderCheckbox = document.getElementById("has-header");
+  var gridTable = document.getElementById("grid-table");
+
+  var delimiterSelect = document.getElementById("delimiter");
+  var csvInput = document.getElementById("csv-input");
+  var loadCsvBtn = document.getElementById("load-csv");
+  var csvError = document.getElementById("csv-error");
+
+  var mdOutput = document.getElementById("md-output");
+
+  var state = {
+    data: [
+      ["Name", "Age", "City"],
+      ["Ada", "32", "London"],
+      ["Grace", "36", "New York"],
+    ],
+    align: ["none", "none", "none"],
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function colCount() {
+    return state.data.length ? state.data[0].length : 0;
+  }
+
+  function renderGrid() {
+    var cols = colCount();
+    var html = "";
+
+    html += "<tr>";
+    for (var c = 0; c < cols; c++) {
+      html +=
+        '<td><select class="align-select" data-col="' +
+        c +
+        '"><option value="none"' +
+        (state.align[c] === "none" ? " selected" : "") +
+        '>Default</option><option value="left"' +
+        (state.align[c] === "left" ? " selected" : "") +
+        '>Left</option><option value="center"' +
+        (state.align[c] === "center" ? " selected" : "") +
+        '>Center</option><option value="right"' +
+        (state.align[c] === "right" ? " selected" : "") +
+        ">Right</option></select></td>";
+    }
+    html += "<td></td></tr>";
+
+    state.data.forEach(function (row, r) {
+      var isHeader = hasHeaderCheckbox.checked && r === 0;
+      html += '<tr class="' + (isHeader ? "header-row" : "") + '">';
+      row.forEach(function (cell, c) {
+        html +=
+          '<td><input type="text" class="cell-input" data-row="' +
+          r +
+          '" data-col="' +
+          c +
+          '" value="' +
+          escapeHtml(cell) +
+          '" /></td>';
+      });
+      html += '<td><button type="button" class="row-remove" data-remove-row="' + r + '" title="Remove row" aria-label="Remove row">&times;</button></td></tr>';
+    });
+
+    gridTable.innerHTML = html;
+  }
+
+  function padTo(row, cols) {
+    var out = row.slice(0, cols);
+    while (out.length < cols) out.push("");
+    return out;
+  }
+
+  function addRow() {
+    state.data.push(new Array(colCount() || 1).fill(""));
+    renderGrid();
+    update();
+  }
+
+  function addColumn() {
+    if (state.data.length === 0) {
+      state.data.push([""]);
+    } else {
+      state.data.forEach(function (row) { row.push(""); });
+    }
+    state.align.push("none");
+    renderGrid();
+    update();
+  }
+
+  function removeRow() {
+    if (state.data.length <= 1) return;
+    state.data.pop();
+    renderGrid();
+    update();
+  }
+
+  function removeColumn() {
+    if (colCount() <= 1) return;
+    state.data.forEach(function (row) { row.pop(); });
+    state.align.pop();
+    renderGrid();
+    update();
+  }
+
+  gridTable.addEventListener("input", function (e) {
+    if (e.target.classList.contains("cell-input")) {
+      var r = parseInt(e.target.getAttribute("data-row"), 10);
+      var c = parseInt(e.target.getAttribute("data-col"), 10);
+      state.data[r][c] = e.target.value;
+      update();
+    }
+  });
+
+  gridTable.addEventListener("change", function (e) {
+    if (e.target.classList.contains("align-select")) {
+      var c = parseInt(e.target.getAttribute("data-col"), 10);
+      state.align[c] = e.target.value;
+      update();
+    }
+  });
+
+  gridTable.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-remove-row]");
+    if (!btn) return;
+    if (state.data.length <= 1) return;
+    var r = parseInt(btn.getAttribute("data-remove-row"), 10);
+    state.data.splice(r, 1);
+    renderGrid();
+    update();
+  });
+
+  addRowBtn.addEventListener("click", addRow);
+  addColBtn.addEventListener("click", addColumn);
+  removeRowBtn.addEventListener("click", removeRow);
+  removeColBtn.addEventListener("click", removeColumn);
+  hasHeaderCheckbox.addEventListener("change", function () {
+    renderGrid();
+    update();
+  });
+
+  function parseCSV(text, delim) {
+    var rows = [];
+    var row = [];
+    var field = "";
+    var inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') {
+            field += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          field += c;
+        }
+      } else if (c === '"') {
+        inQuotes = true;
+      } else if (c === delim) {
+        row.push(field);
+        field = "";
+      } else if (c === "\n") {
+        row.push(field);
+        rows.push(row);
+        row = [];
+        field = "";
+      } else if (c === "\r") {
+        // ignore; \n handles the row break
+      } else {
+        field += c;
+      }
+    }
+    if (field.length || row.length) {
+      row.push(field);
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function detectDelimiter(text) {
+    var firstLine = text.split(/\r?\n/, 1)[0] || "";
+    var candidates = [",", "\t", ";"];
+    var best = ",";
+    var bestCount = -1;
+    candidates.forEach(function (d) {
+      var count = firstLine.split(d).length - 1;
+      if (count > bestCount) {
+        bestCount = count;
+        best = d;
+      }
+    });
+    return bestCount > 0 ? best : ",";
+  }
+
+  function tabTo(el) {
+    [tabVisual, tabCsv].forEach(function (t) { t.classList.remove("selected"); });
+    [gridPanel, csvPanel].forEach(function (p) { p.classList.remove("active"); });
+    el.tab.classList.add("selected");
+    el.panel.classList.add("active");
+  }
+
+  tabVisual.addEventListener("click", function () { tabTo({ tab: tabVisual, panel: gridPanel }); });
+  tabCsv.addEventListener("click", function () { tabTo({ tab: tabCsv, panel: csvPanel }); });
+
+  loadCsvBtn.addEventListener("click", function () {
+    csvError.innerHTML = "";
+    var text = csvInput.value;
+    if (!text.trim()) {
+      csvError.innerHTML = '<div class="banner banner-error">Paste some CSV text first.</div>';
+      return;
+    }
+    var delim = delimiterSelect.value === "auto" ? detectDelimiter(text) : delimiterSelect.value;
+    var rows = parseCSV(text, delim);
+    rows = rows.filter(function (r) { return !(r.length === 1 && r[0] === ""); });
+    if (rows.length === 0) {
+      csvError.innerHTML = '<div class="banner banner-error">Could not find any rows in that CSV text.</div>';
+      return;
+    }
+    var maxCols = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 1);
+    state.data = rows.map(function (r) { return padTo(r, maxCols); });
+    state.align = new Array(maxCols).fill("none");
+    renderGrid();
+    update();
+    tabTo({ tab: tabVisual, panel: gridPanel });
+  });
+
+  function escCell(v) {
+    return String(v).replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
+  }
+
+  function separatorFor(align, width) {
+    var w = Math.max(width, align === "center" ? 3 : 3);
+    if (align === "left") return ":" + "-".repeat(Math.max(w - 1, 1));
+    if (align === "right") return "-".repeat(Math.max(w - 1, 1)) + ":";
+    if (align === "center") return ":" + "-".repeat(Math.max(w - 2, 1)) + ":";
+    return "-".repeat(w);
+  }
+
+  function update() {
+    var cols = colCount();
+    if (state.data.length === 0 || cols === 0) {
+      mdOutput.textContent = "Add at least one row and column.";
+      return;
+    }
+    var hasHeader = hasHeaderCheckbox.checked;
+    var headerRow = hasHeader ? state.data[0] : new Array(cols).fill("");
+    var dataRows = hasHeader ? state.data.slice(1) : state.data;
+
+    var widths = [];
+    for (var c = 0; c < cols; c++) {
+      var w = escCell(headerRow[c]).length;
+      dataRows.forEach(function (row) { w = Math.max(w, escCell(row[c]).length); });
+      widths.push(Math.max(w, 3));
+    }
+
+    var lines = [];
+    lines.push(
+      "| " +
+        headerRow.map(function (cell, c) { return escCell(cell).padEnd(widths[c]); }).join(" | ") +
+        " |"
+    );
+    lines.push(
+      "| " +
+        widths.map(function (w, c) { return separatorFor(state.align[c], w); }).join(" | ") +
+        " |"
+    );
+    dataRows.forEach(function (row) {
+      lines.push(
+        "| " +
+          row.map(function (cell, c) { return escCell(cell).padEnd(widths[c]); }).join(" | ") +
+          " |"
+      );
+    });
+
+    mdOutput.textContent = lines.join("\n");
+  }
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    var target = document.getElementById(btn.getAttribute("data-copy-target"));
+    if (!target) return;
+    navigator.clipboard.writeText(target.textContent).then(function () {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1200);
+    });
+  });
+
+  renderGrid();
+  update();
+})();
+</script>
+</body>
+</html>

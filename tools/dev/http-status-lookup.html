@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HTTP Status Codes — Dev Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .status-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .status-code {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 15px;
+    min-width: 40px;
+    flex-shrink: 0;
+  }
+  .status-1xx .status-code { color: #93c5fd; }
+  .status-2xx .status-code { color: var(--success); }
+  .status-3xx .status-code { color: #fbbf24; }
+  .status-4xx .status-code { color: #fb923c; }
+  .status-5xx .status-code { color: var(--error); }
+  .status-body { flex: 1; min-width: 0; }
+  .status-name { font-weight: 600; font-size: 14px; }
+  .status-desc { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+  .status-row .copy-btn {
+    position: static;
+    flex-shrink: 0;
+  }
+  .no-results { color: var(--text-faint); font-size: 13px; padding: 10px 2px; }
+  .category-heading {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+    margin: 18px 0 8px;
+  }
+  .category-heading:first-child {
+    margin-top: 0;
+  }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🛠️ Dev Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>HTTP Status Codes</h1>
+  <p class="subtitle">Search by code, name, or keyword. Click a row's copy button to copy "code — name".</p>
+
+  <div class="card">
+    <div class="field">
+      <label for="search">Search</label>
+      <input type="search" id="search" placeholder="e.g. 404, redirect, teapot, rate limit" autocomplete="off" />
+    </div>
+    <div id="results"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. Nothing is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var STATUSES = [
+    [100, "Continue", "The initial part of the request has been received and the client should continue with the rest, or ignore this if the request is complete."],
+    [101, "Switching Protocols", "The server is switching protocols as requested by the client's Upgrade header."],
+    [102, "Processing", "The server has received and is processing the request, but no response is available yet (WebDAV)."],
+    [103, "Early Hints", "Sent before the final response to let the client preload resources referenced by headers such as Link."],
+    [200, "OK", "The request succeeded. The meaning depends on the HTTP method used."],
+    [201, "Created", "The request succeeded and a new resource was created as a result, usually after a POST or PUT."],
+    [202, "Accepted", "The request has been received but not yet acted upon; processing may not have completed."],
+    [203, "Non-Authoritative Information", "The returned metadata is not exactly the same as from the origin server, but from a local or third-party copy."],
+    [204, "No Content", "There is no content to send for this request, but the headers are useful. The client may update its cached headers."],
+    [205, "Reset Content", "Tells the client to reset the document that sent this request, e.g. to clear a form."],
+    [206, "Partial Content", "Used with range requests to deliver only part of a resource."],
+    [207, "Multi-Status", "Conveys information about multiple resources in situations where multiple status codes may be appropriate (WebDAV)."],
+    [208, "Already Reported", "Used inside a DAV: propstat response to avoid repeatedly enumerating internal members of multiple bindings."],
+    [226, "IM Used", "The server has fulfilled a GET request and the response is a representation of the result of one or more instance manipulations."],
+    [300, "Multiple Choices", "The request has more than one possible response; the user or user agent should choose one."],
+    [301, "Moved Permanently", "The URL of the requested resource has been changed permanently. The new URL is given in the response."],
+    [302, "Found", "The URL has been changed temporarily. Further changes may occur, so keep using the same URL for future requests."],
+    [303, "See Other", "The server sends this to direct the client to get the requested resource at another URI with a GET request."],
+    [304, "Not Modified", "Tells the client the cached response is still fresh and can be used, per caching headers."],
+    [305, "Use Proxy", "Deprecated. Defined in a previous version of the HTTP specification to indicate a proxy must be used."],
+    [307, "Temporary Redirect", "The requested resource is temporarily at a different URI; repeat the request with the same method."],
+    [308, "Permanent Redirect", "The resource has been moved permanently to a new URI; future requests should use the new URI and same method."],
+    [400, "Bad Request", "The server cannot process the request due to a client error, such as malformed syntax."],
+    [401, "Unauthorized", "The client must authenticate itself to get the requested response (despite the name, this means unauthenticated)."],
+    [402, "Payment Required", "Reserved for future use, originally intended for digital payment systems."],
+    [403, "Forbidden", "The client does not have access rights to the content; unlike 401, re-authenticating won't help."],
+    [404, "Not Found", "The server cannot find the requested resource. The endpoint may not exist or may be hidden intentionally."],
+    [405, "Method Not Allowed", "The request method is known by the server but is not supported by the target resource."],
+    [406, "Not Acceptable", "No content matching the criteria in the request's Accept headers can be produced."],
+    [407, "Proxy Authentication Required", "Similar to 401, but authentication must be done via a proxy."],
+    [408, "Request Timeout", "The server timed out waiting for the request; the client may retry."],
+    [409, "Conflict", "The request conflicts with the current state of the target resource, e.g. an edit conflict."],
+    [410, "Gone", "The requested content has been permanently deleted and there is no forwarding address."],
+    [411, "Length Required", "The server refused the request because the Content-Length header field is not defined."],
+    [412, "Precondition Failed", "One of the client's conditional headers (e.g. If-Match) does not match the server's current state."],
+    [413, "Content Too Large", "The request entity is larger than limits defined by the server."],
+    [414, "URI Too Long", "The URI requested by the client is longer than the server is willing to interpret."],
+    [415, "Unsupported Media Type", "The media format of the requested data is not supported by the server."],
+    [416, "Range Not Satisfiable", "The range specified by the Range header cannot be fulfilled for the resource."],
+    [417, "Expectation Failed", "The expectation given in the request's Expect header could not be met."],
+    [418, "I'm a teapot", "A joke status defined in RFC 2324's Hyper Text Coffee Pot Control Protocol; the server refuses to brew coffee in a teapot."],
+    [421, "Misdirected Request", "The request was directed at a server that is not able to produce a response."],
+    [422, "Unprocessable Content", "The request was well-formed but was unable to be followed due to semantic errors (common with validation failures)."],
+    [423, "Locked", "The resource being accessed is locked (WebDAV)."],
+    [424, "Failed Dependency", "The request failed because it depended on another request that failed (WebDAV)."],
+    [425, "Too Early", "The server is unwilling to risk processing a request that might be replayed."],
+    [426, "Upgrade Required", "The server refuses the request using the current protocol but might accept it after the client upgrades."],
+    [428, "Precondition Required", "The origin server requires the request to be conditional, to prevent lost-update issues."],
+    [429, "Too Many Requests", "The client has sent too many requests in a given time ('rate limiting')."],
+    [431, "Request Header Fields Too Large", "The server is unwilling to process the request because its header fields are too large."],
+    [451, "Unavailable For Legal Reasons", "The requested resource is unavailable due to a legal demand, such as government censorship."],
+    [500, "Internal Server Error", "The server encountered an unexpected condition that prevented it from fulfilling the request."],
+    [501, "Not Implemented", "The request method is not supported by the server and cannot be handled."],
+    [502, "Bad Gateway", "The server, while acting as a gateway or proxy, received an invalid response from the upstream server."],
+    [503, "Service Unavailable", "The server is not ready to handle the request, often due to maintenance or overload."],
+    [504, "Gateway Timeout", "The server, acting as a gateway, did not get a response in time from the upstream server."],
+    [505, "HTTP Version Not Supported", "The HTTP version used in the request is not supported by the server."],
+    [506, "Variant Also Negotiates", "The server has an internal configuration error: content negotiation for the request results in a circular reference."],
+    [507, "Insufficient Storage", "The method could not be performed because the server is unable to store the representation needed (WebDAV)."],
+    [508, "Loop Detected", "The server detected an infinite loop while processing the request (WebDAV)."],
+    [510, "Not Extended", "Further extensions to the request are required for the server to fulfill it."],
+    [511, "Network Authentication Required", "The client needs to authenticate to gain network access, e.g. a captive portal."],
+  ];
+
+  var CATEGORY_NAMES = {
+    1: "1xx — Informational",
+    2: "2xx — Success",
+    3: "3xx — Redirection",
+    4: "4xx — Client Error",
+    5: "5xx — Server Error",
+  };
+
+  var search = document.getElementById("search");
+  var results = document.getElementById("results");
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function render() {
+    var q = search.value.trim().toLowerCase();
+    var filtered = STATUSES.filter(function (s) {
+      if (!q) return true;
+      return String(s[0]).indexOf(q) !== -1 || s[1].toLowerCase().indexOf(q) !== -1 || s[2].toLowerCase().indexOf(q) !== -1;
+    });
+
+    if (filtered.length === 0) {
+      results.innerHTML = '<div class="no-results">No status codes match "' + escapeHtml(search.value) + '".</div>';
+      return;
+    }
+
+    var html = "";
+    var lastCategory = null;
+    filtered.forEach(function (s) {
+      var category = Math.floor(s[0] / 100);
+      if (category !== lastCategory) {
+        html += '<div class="category-heading">' + CATEGORY_NAMES[category] + "</div>";
+        lastCategory = category;
+      }
+      html +=
+        '<div class="status-row status-' +
+        category +
+        'xx"><div class="status-code">' +
+        s[0] +
+        '</div><div class="status-body"><div class="status-name">' +
+        escapeHtml(s[1]) +
+        '</div><div class="status-desc">' +
+        escapeHtml(s[2]) +
+        '</div></div><button class="copy-btn" type="button" data-copy-text="' +
+        escapeHtml(s[0] + " " + s[1]) +
+        '">Copy</button></div>';
+    });
+    results.innerHTML = '<div class="status-list">' + html + "</div>";
+  }
+
+  search.addEventListener("input", render);
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    var text = btn.getAttribute("data-copy-text");
+    navigator.clipboard.writeText(text).then(function () {
+      var original = btn.textContent;
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () {
+        btn.textContent = original;
+        btn.classList.remove("copied");
+      }, 1200);
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
