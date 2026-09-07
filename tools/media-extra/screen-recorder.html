@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Screen Recorder — Media Extras</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧪 Media Extras</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Screen Recorder</h1>
+  <p class="subtitle">Record your screen, a window, or a browser tab directly in the browser and download the result. Nothing is uploaded — recording happens locally via the MediaRecorder API.</p>
+
+  <div class="card" id="unsupported-card" style="display:none">
+    <div class="banner banner-error">
+      Your browser doesn't support screen recording (the <code>getDisplayMedia</code> or
+      <code>MediaRecorder</code> API is missing). Try a recent desktop version of Chrome, Firefox, or Edge —
+      most mobile browsers don't support this yet.
+    </div>
+  </div>
+
+  <div class="card" id="setup-card">
+    <h2>1. Options</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Output format</label>
+        <select id="format-select">
+          <option value="webm" selected>WebM</option>
+          <option value="mp4">MP4</option>
+        </select>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="audio-check" checked /> Include audio (if shared)</label>
+      </div>
+    </div>
+    <div class="hint" id="mp4-hint" style="display:none">
+      MP4 recording depends on your browser's built-in encoder support. If it's unavailable, this falls back to WebM automatically.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="start-btn" type="button">Start recording</button>
+      <button class="btn btn-secondary" id="stop-btn" type="button" disabled>Stop</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card" id="live-card" style="display:none">
+    <h2>Live preview</h2>
+    <video id="live-preview" autoplay muted playsinline></video>
+    <div class="file-info"><span id="timer">0:00</span></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>2. Result</h2>
+    <video id="output-video" controls></video>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Recording happens entirely in your browser. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+<script src="js/screen-recorder.js"></script>
+</body>
+</html>

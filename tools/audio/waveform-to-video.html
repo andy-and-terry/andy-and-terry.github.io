@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Waveform Video — Audio Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🎧 Audio Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Waveform Video</h1>
+  <p class="subtitle">Render a waveform visualization of your audio as an MP4. Runs entirely in your browser — nothing uploads anywhere.</p>
+
+  <div class="card">
+    <h2>1. Choose an audio file</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose an audio file">
+      <div><strong>Click to choose</strong> or drag an audio file here</div>
+      <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.oga,.m4a,.aac,.flac,.wma,.opus,.aiff,.webm" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <audio id="preview" class="preview" controls style="display:none"></audio>
+    <div class="waveform-wrap" id="waveform-wrap" style="display:none">
+      <canvas class="waveform" id="waveform" style="display:none"></canvas>
+      <div class="waveform-empty" id="waveform-empty" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Appearance</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Resolution</label>
+        <select id="resolution-select">
+          <option value="1280x720" selected>1280x720 (HD)</option>
+          <option value="1920x1080">1920x1080 (Full HD)</option>
+          <option value="854x480">854x480</option>
+          <option value="640x360">640x360</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Style</label>
+        <select id="mode-select">
+          <option value="cline" selected>Filled line</option>
+          <option value="line">Line</option>
+          <option value="p2p">Point to point</option>
+          <option value="point">Points</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Wave color</label>
+        <input type="color" id="wave-color" value="#7c8cff" />
+      </div>
+      <div class="field">
+        <label>Background color</label>
+        <input type="color" id="bg-color" value="#0b0d12" />
+      </div>
+      <div class="field">
+        <label>Frame rate</label>
+        <select id="fps-select">
+          <option value="24">24 fps</option>
+          <option value="25" selected>25 fps</option>
+          <option value="30">30 fps</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="split-channels" /> Split stereo channels into separate waves</label>
+    </div>
+
+    <h2>3. Output</h2>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Render video</button>
+    </div>
+    <div class="hint" style="margin-top:10px">Rendering re-encodes the whole clip to video, so it can take a while for longer tracks.</div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+    <details class="log" id="log-details">
+      <summary>ffmpeg log</summary>
+      <pre id="log-output"></pre>
+    </details>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>4. Result</h2>
+    <video id="output-video" controls></video>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="lib/ffmpeg.js"></script>
+<script src="lib/ffmpeg-util.js"></script>
+<script src="nav.js"></script>
+<script src="js/waveform.js"></script>
+<script src="js/waveform-to-video.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Regex Tester</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Text Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+  <a href="../index.html" style="color:var(--text-faint);font-size:13px;white-space:nowrap">← All Toolkits</a>
+</header>
+
+<main>
+  <h1>Regex Tester</h1>
+  <p class="subtitle">Live regex matching with highlighted results and capture groups. Runs entirely in your browser.</p>
+
+  <div class="card">
+    <h2>Pattern</h2>
+    <div class="field-row">
+      <div class="field" style="flex:3">
+        <label for="pattern">Pattern</label>
+        <input type="text" id="pattern" placeholder="\b\w+@\w+\.\w+\b" spellcheck="false" />
+      </div>
+      <div class="field" style="flex:1;min-width:100px">
+        <label for="flags">Flags</label>
+        <input type="text" id="flags" value="g" placeholder="g, i, m, s, u" spellcheck="false" />
+      </div>
+    </div>
+    <div id="regex-error" class="banner banner-error" hidden></div>
+  </div>
+
+  <div class="card">
+    <h2>Test String</h2>
+    <div class="field">
+      <textarea id="test-string" rows="8" spellcheck="false" placeholder="Paste text to test against the pattern"></textarea>
+    </div>
+    <div class="hint" id="match-summary"></div>
+    <div class="output-box" id="highlighted-output" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card" id="groups-card" hidden>
+    <h2>Matches &amp; Capture Groups</h2>
+    <div class="match-list" id="match-list"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs entirely in your browser. Nothing you type is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/regex-tester.js"></script>
+</body>
+</html>
