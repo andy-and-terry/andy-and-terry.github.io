@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Video Bulk — Bulk Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📦 Bulk Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Video Bulk</h1>
+  <p class="subtitle">
+    Apply one operation to a whole batch of video files. Each file is run through the actual
+    <a href="../video/index.html">Video Toolkit</a> tool in turn — ffmpeg.wasm is single-threaded, so
+    files process one at a time. Everything still runs locally in your tab.
+  </p>
+
+  <div class="card">
+    <h2>1. Add videos</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose video files">
+      <div><strong>Click to add</strong> or drag video files here (add more anytime)</div>
+      <input type="file" id="file-input" accept="video/*" multiple hidden />
+    </div>
+    <ul class="file-list" id="queue-list" style="margin-top: 14px"></ul>
+  </div>
+
+  <div class="card" id="op-card" style="display: none">
+    <h2>2. Choose an operation</h2>
+    <div class="field">
+      <label>Operation</label>
+      <select id="op-select">
+        <option value="compress">Compress</option>
+        <option value="trim">Trim (keep first N seconds)</option>
+        <option value="speed">Speed</option>
+        <option value="rotate-flip">Rotate / Flip</option>
+        <option value="denoise">Denoise</option>
+        <option value="color-adjust">Color Adjust</option>
+        <option value="reverse">Reverse</option>
+        <option value="extract-audio">Extract Audio</option>
+      </select>
+    </div>
+
+    <div class="op-panel" data-op="compress">
+      <div class="field">
+        <label>Quality <span class="value-pill" id="crf-range-pill">CRF 28</span></label>
+        <input type="range" id="crf-range" min="18" max="36" step="1" value="28" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Max resolution</label>
+          <select id="resolution-select">
+            <option value="0">Original</option>
+            <option value="1080">1080p</option>
+            <option value="720" selected>720p</option>
+            <option value="480">480p</option>
+            <option value="360">360p</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Audio bitrate</label>
+          <select id="audio-select">
+            <option value="128k" selected>128 kbps</option>
+            <option value="96k">96 kbps</option>
+            <option value="none">Remove audio</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Encode speed</label>
+          <select id="speed-select">
+            <option value="ultrafast">Ultrafast</option>
+            <option value="veryfast" selected>Balanced</option>
+            <option value="slow">Slow (smaller file)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="op-panel" data-op="trim">
+      <div class="field-row">
+        <div class="field">
+          <label>Start (seconds)</label>
+          <input type="number" id="bulk-trim-start" min="0" step="0.1" value="0" />
+        </div>
+        <div class="field">
+          <label>Duration (seconds)</label>
+          <input type="number" id="bulk-trim-duration" min="0.1" step="0.1" value="5" />
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="fast-mode" /> Fast mode (stream copy, no re-encode)</label>
+        <div class="hint">Faster and lossless, but the cut may snap to the nearest keyframe.</div>
+      </div>
+      <div class="hint">Clips shorter than the requested range are trimmed to their own end.</div>
+    </div>
+
+    <div class="op-panel" data-op="speed">
+      <div class="field">
+        <label>Speed factor <span class="value-pill" id="speed-range-pill">1.00x</span></label>
+        <input type="range" id="speed-range" min="0.25" max="4" step="0.05" value="1" />
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="mute-audio" /> Mute audio</label>
+      </div>
+    </div>
+
+    <div class="op-panel" data-op="rotate-flip">
+      <div class="field-row">
+        <div class="field">
+          <label>Rotate</label>
+          <select id="rotate-select">
+            <option value="0" selected>None</option>
+            <option value="90">90° clockwise</option>
+            <option value="180">180°</option>
+            <option value="270">270° clockwise</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="flip-h" /> Flip horizontal</label>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="flip-v" /> Flip vertical</label>
+      </div>
+    </div>
+
+    <div class="op-panel" data-op="denoise">
+      <div class="field-row">
+        <div class="field">
+          <label>Strength</label>
+          <select id="strength-select">
+            <option value="light">Light</option>
+            <option value="medium" selected>Medium</option>
+            <option value="strong">Strong</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="hq-mode" /> High quality (nlmeans, much slower)</label>
+      </div>
+    </div>
+
+    <div class="op-panel" data-op="color-adjust">
+      <div class="field-row">
+        <div class="field">
+          <label>Brightness <span class="value-pill" id="brightness-range-pill">0</span></label>
+          <input type="range" id="brightness-range" min="-0.5" max="0.5" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label>Contrast <span class="value-pill" id="contrast-range-pill">1.00</span></label>
+          <input type="range" id="contrast-range" min="0.3" max="2" step="0.01" value="1" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Saturation <span class="value-pill" id="saturation-range-pill">1.00</span></label>
+          <input type="range" id="saturation-range" min="0" max="3" step="0.01" value="1" />
+        </div>
+        <div class="field">
+          <label>Gamma <span class="value-pill" id="gamma-range-pill">1.00</span></label>
+          <input type="range" id="gamma-range" min="0.3" max="3" step="0.01" value="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="op-panel" data-op="reverse">
+      <div class="field">
+        <label><input type="checkbox" id="reverse-audio" checked /> Reverse audio too (unchecked mutes it)</label>
+      </div>
+    </div>
+
+    <div class="op-panel" data-op="extract-audio">
+      <div class="field-row">
+        <div class="field">
+          <label>Format</label>
+          <select id="format-select">
+            <option value="mp3" selected>MP3</option>
+            <option value="m4a">M4A (AAC)</option>
+            <option value="ogg">OGG (Vorbis)</option>
+            <option value="wav">WAV (uncompressed)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Bitrate</label>
+          <select id="bitrate-select">
+            <option value="128k">128 kbps</option>
+            <option value="192k" selected>192 kbps</option>
+            <option value="320k">320 kbps</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="process-card" style="display: none">
+    <h2>3. Process</h2>
+    <div class="queue-summary" id="queue-summary"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="start-btn" type="button">Start processing</button>
+      <button class="btn btn-secondary" id="download-zip-btn" type="button" style="display: none">
+        Download all as ZIP
+      </button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div id="error-banner"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="lib/jszip.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/bulk-common.js"></script>
+<script src="js/video-ops.js"></script>
+<script src="js/video-bulk.js"></script>
+</body>
+</html>
