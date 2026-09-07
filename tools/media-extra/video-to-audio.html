@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Video to Audio — Media Extras</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧪 Media Extras</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Video to Audio</h1>
+  <p class="subtitle">Pull just the audio track out of a video and save it as MP3, WAV, or AAC.</p>
+
+  <div class="card">
+    <h2>1. Choose a video</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose a video file">
+      <div><strong>Click to choose</strong> or drag a video file here</div>
+      <input type="file" id="file-input" accept="video/*" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <video id="preview" controls style="display:none"></video>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Output format</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Format</label>
+        <select id="format-select">
+          <option value="mp3" selected>MP3</option>
+          <option value="aac">AAC (.m4a)</option>
+          <option value="wav">WAV (uncompressed)</option>
+        </select>
+      </div>
+      <div class="field" id="bitrate-field">
+        <label>Bitrate</label>
+        <select id="bitrate-select">
+          <option value="128k">128 kbps</option>
+          <option value="192k" selected>192 kbps</option>
+          <option value="320k">320 kbps</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Extract audio</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+    <details class="log" id="log-details">
+      <summary>ffmpeg log</summary>
+      <pre id="log-output"></pre>
+    </details>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <audio id="output-audio" controls style="width:100%; margin: 16px 0"></audio>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="lib/ffmpeg.js"></script>
+<script src="lib/ffmpeg-util.js"></script>
+<script src="nav.js"></script>
+<script src="js/video-to-audio.js"></script>
+</body>
+</html>
