@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Background Remove — Image Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🖼️ Image Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Remove Background</h1>
+  <p class="subtitle">
+    Uses a small on-device ML model to cut the subject out of the background. The first run downloads
+    the model (a few MB) and can take a while — it's cached in your browser after that.
+  </p>
+
+  <div class="card">
+    <h2>1. Choose an image</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose an image file">
+      <div><strong>Click to choose</strong> or drag an image here</div>
+      <input type="file" id="file-input" accept="image/*" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <img class="preview" id="preview" style="display:none" alt="Original preview" />
+    <div id="load-error"></div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Remove background</h2>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Remove background</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <div class="field-row">
+      <div class="field" style="flex:1">
+        <label>Before</label>
+        <img class="preview" id="before-preview" alt="Before" />
+      </div>
+      <div class="field" style="flex:1">
+        <label>After (transparent background)</label>
+        <img class="preview" id="after-preview" alt="After" style="background-image: linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(-45deg, #333 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #333 75%), linear-gradient(-45deg, transparent 75%, #333 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0;" />
+        <div class="hint" id="after-size"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download PNG</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Image data stays in your browser; only the ML model files are fetched from a CDN.</footer>
+
+<script src="js/common.js"></script>
+<script src="nav.js"></script>
+<script type="module" src="js/background-remove.js"></script>
+</body>
+</html>
