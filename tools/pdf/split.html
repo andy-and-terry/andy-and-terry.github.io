@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Split PDF — PDF Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📄 PDF Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Split PDF</h1>
+  <p class="subtitle">Split a PDF by page ranges, or click thumbnails to extract individual pages.</p>
+
+  <div class="card">
+    <h2>1. Choose a PDF</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose a PDF file">
+      <div><strong>Click to choose</strong> or drag a PDF file here</div>
+      <input type="file" id="file-input" accept="application/pdf" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span><span id="file-size"></span>
+    </div>
+  </div>
+
+  <div class="card" id="thumbs-card" style="display:none">
+    <h2>2. Pages</h2>
+    <div class="hint" style="margin-bottom:10px">Click pages to select them for extraction, or use a page-range below instead.</div>
+    <div class="thumb-grid" id="thumb-grid"></div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>3. Split settings</h2>
+    <div class="field">
+      <label>Mode</label>
+      <select id="mode-select">
+        <option value="ranges">Split into files by page range(s)</option>
+        <option value="selection">Extract selected pages into one file</option>
+        <option value="each">Extract every page into its own file (zip-free: downloads individually)</option>
+      </select>
+    </div>
+    <div class="field" id="ranges-field">
+      <label>Page ranges</label>
+      <input type="text" id="ranges-input" placeholder="e.g. 1-3, 5, 8-10" />
+      <div class="hint">Each comma-separated range becomes a separate output PDF. Pages are 1-indexed.</div>
+    </div>
+    <div class="field">
+      <label>Output filename prefix</label>
+      <input type="text" id="output-name" value="split" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Split PDF</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>4. Results</h2>
+    <ul class="file-list" id="output-list"></ul>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via pdf-lib and pdf.js. No files leave your device.</footer>
+
+<script src="lib/pdf-lib.min.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/pdf-common.js"></script>
+<script src="js/split.js"></script>
+</body>
+</html>

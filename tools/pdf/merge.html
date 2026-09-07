@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Merge PDFs — PDF Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📄 PDF Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Merge PDFs</h1>
+  <p class="subtitle">Combine multiple PDFs into one file, in the order you choose. Drag list items to reorder.</p>
+
+  <div class="card">
+    <h2>1. Add PDFs</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose PDF files">
+      <div><strong>Click to add</strong> or drag PDF files here (add more anytime)</div>
+      <input type="file" id="file-input" accept="application/pdf" multiple hidden />
+    </div>
+    <ul class="file-list" id="file-list" style="margin-top:14px"></ul>
+    <div class="hint">Drag items in the list to change the merge order.</div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Settings</h2>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" value="merged.pdf" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Merge PDFs</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via pdf-lib. No files leave your device.</footer>
+
+<script src="lib/pdf-lib.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/merge.js"></script>
+</body>
+</html>

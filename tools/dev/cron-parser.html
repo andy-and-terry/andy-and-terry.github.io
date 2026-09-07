@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cron Parser — Dev Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🛠️ Dev Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Cron Parser</h1>
+  <p class="subtitle">
+    Enter a standard 5-field cron expression to see a plain-English explanation and its next
+    upcoming run times, computed in your browser's local timezone.
+  </p>
+
+  <div class="card">
+    <h2>1. Expression</h2>
+    <div class="field">
+      <label for="cron-input">Cron expression</label>
+      <input
+        type="text"
+        id="cron-input"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="*/15 9-17 * * 1-5"
+      />
+      <div class="hint">
+        Fields: minute hour day-of-month month day-of-week. Supports <code>*</code>,
+        <code>,</code> lists, <code>-</code> ranges, <code>/</code> steps, month/day names, and
+        <code>@daily</code>/<code>@hourly</code>/<code>@weekly</code>/<code>@monthly</code>/<code>@yearly</code>/<code>@annually</code>/<code>@midnight</code>.
+      </div>
+    </div>
+    <div class="chip-grid" id="presets"></div>
+    <div id="cron-error"></div>
+  </div>
+
+  <div class="card output-card" id="explain-card">
+    <h2>2. What it means</h2>
+    <div class="output-block">
+      <pre id="explain-output"></pre>
+      <button class="copy-btn" data-copy-target="explain-output" type="button">Copy</button>
+    </div>
+  </div>
+
+  <div class="card output-card" id="fields-card">
+    <h2>3. Field breakdown</h2>
+    <div id="fields-table-wrap"></div>
+  </div>
+
+  <div class="card output-card" id="runs-card">
+    <h2>4. Next run times</h2>
+    <div class="field" style="max-width:160px">
+      <label for="run-count">Show next</label>
+      <input type="number" id="run-count" min="1" max="50" value="5" />
+    </div>
+    <div class="output-block">
+      <pre id="runs-output"></pre>
+      <button class="copy-btn" data-copy-target="runs-output" type="button">Copy</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. Nothing is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var input = document.getElementById("cron-input");
+  var errorBox = document.getElementById("cron-error");
+  var explainCard = document.getElementById("explain-card");
+  var explainOutput = document.getElementById("explain-output");
+  var fieldsCard = document.getElementById("fields-card");
+  var fieldsWrap = document.getElementById("fields-table-wrap");
+  var runsCard = document.getElementById("runs-card");
+  var runsOutput = document.getElementById("runs-output");
+  var runCount = document.getElementById("run-count");
+  var presetsBox = document.getElementById("presets");
+
+  var MONTH_NAMES = { 1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December" };
+  var MONTH_ABBR = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  var DOW_NAMES = { 0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday" };
+  var DOW_ABBR = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
+  var SPECIALS = {
+    "@yearly": "0 0 1 1 *",
+    "@annually": "0 0 1 1 *",
+    "@monthly": "0 0 1 * *",
+    "@weekly": "0 0 * * 0",
+    "@daily": "0 0 * * *",
+    "@midnight": "0 0 * * *",
+    "@hourly": "0 * * * *",
+  };
+
+  var PRESETS = [
+    ["Every minute", "* * * * *"],
+    ["Every 5 minutes", "*/5 * * * *"],
+    ["Hourly", "@hourly"],
+    ["Daily at midnight", "@daily"],
+    ["Weekdays at 9am", "0 9 * * 1-5"],
+    ["Weekly (Sun)", "@weekly"],
+    ["Monthly (1st)", "@monthly"],
+    ["Yearly (Jan 1)", "@yearly"],
+  ];
+
+  presetsBox.innerHTML = PRESETS.map(function (p) {
+    return '<button type="button" class="chip" data-preset="' + escapeHtml(p[1]) + '">' + escapeHtml(p[0]) + "</button>";
+  }).join("");
+
+  presetsBox.addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip");
+    if (!chip) return;
+    input.value = chip.getAttribute("data-preset");
+    process();
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function parseValue(token, min, max, nameMap) {
+    var t = token.trim().toLowerCase();
+    if (nameMap && Object.prototype.hasOwnProperty.call(nameMap, t)) {
+      return nameMap[t];
+    }
+    if (!/^\d+$/.test(t)) {
+      throw new Error('invalid value "' + token + '"');
+    }
+    return parseInt(t, 10);
+  }
+
+  function parseField(raw, min, max, nameMap, isDow) {
+    var partsRaw = raw.split(",");
+    var set = new Set();
+    var segments = [];
+    for (var i = 0; i < partsRaw.length; i++) {
+      var part = partsRaw[i].trim();
+      if (part === "") throw new Error('empty item in "' + raw + '"');
+      var step = null;
+      var base = part;
+      var slashIdx = part.indexOf("/");
+      if (slashIdx !== -1) {
+        base = part.slice(0, slashIdx);
+        var stepStr = part.slice(slashIdx + 1);
+        if (!/^\d+$/.test(stepStr) || parseInt(stepStr, 10) <= 0) {
+          throw new Error('invalid step "' + stepStr + '" in "' + part + '"');
+        }
+        step = parseInt(stepStr, 10);
+      }
+      var isAny = false,
+        isRange = false,
+        isSingle = false,
+        rangeStart,
+        rangeEnd;
+      if (base === "*" || base === "?") {
+        isAny = true;
+        rangeStart = min;
+        rangeEnd = max;
+      } else if (base.indexOf("-") !== -1) {
+        isRange = true;
+        var bounds = base.split("-");
+        if (bounds.length !== 2) throw new Error('invalid range "' + base + '"');
+        rangeStart = parseValue(bounds[0], min, max, nameMap);
+        rangeEnd = parseValue(bounds[1], min, max, nameMap);
+      } else {
+        isSingle = true;
+        rangeStart = rangeEnd = parseValue(base, min, max, nameMap);
+      }
+      if (isDow) {
+        if (rangeStart === 7) rangeStart = 0;
+        if (rangeEnd === 7) rangeEnd = 0;
+      }
+      [rangeStart, rangeEnd].forEach(function (v) {
+        if (v < min || v > max) {
+          throw new Error('value ' + v + ' out of range ' + min + "-" + max + ' in "' + part + '"');
+        }
+      });
+      var vals = [];
+      if (rangeStart <= rangeEnd) {
+        for (var v1 = rangeStart; v1 <= rangeEnd; v1++) vals.push(v1);
+      } else {
+        for (var v2 = rangeStart; v2 <= max; v2++) vals.push(v2);
+        for (var v3 = min; v3 <= rangeEnd; v3++) vals.push(v3);
+      }
+      var finalVals = step !== null ? vals.filter(function (_, idx) { return idx % step === 0; }) : vals;
+      finalVals.forEach(function (v) { set.add(v); });
+      segments.push({ raw: part, isAny: isAny, isRange: isRange, isSingle: isSingle, rangeStart: rangeStart, rangeEnd: rangeEnd, step: step });
+    }
+    var isAnyWhole = partsRaw.length === 1 && segments[0].isAny && segments[0].step === null;
+    return { set: set, segments: segments, isAnyWhole: isAnyWhole, raw: raw };
+  }
+
+  function parseCron(expr) {
+    var trimmed = expr.trim();
+    if (!trimmed) throw new Error("empty");
+    var specialKey = trimmed.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(SPECIALS, specialKey)) {
+      trimmed = SPECIALS[specialKey];
+    } else if (specialKey.charAt(0) === "@") {
+      throw new Error(
+        'Unknown special expression "' + expr.trim() + '". Try @yearly, @monthly, @weekly, @daily, @hourly, @midnight, or @annually.'
+      );
+    }
+    var parts = trimmed.split(/\s+/);
+    if (parts.length !== 5) {
+      throw new Error(
+        "Expected 5 fields (minute hour day-of-month month day-of-week), got " + parts.length + ": \"" + trimmed + '"'
+      );
+    }
+    var minute = parseField(parts[0], 0, 59, null, false);
+    var hour = parseField(parts[1], 0, 23, null, false);
+    var dom = parseField(parts[2], 1, 31, null, false);
+    var month = parseField(parts[3], 1, 12, MONTH_ABBR, false);
+    var dow = parseField(parts[4], 0, 7, DOW_ABBR, true);
+    if (minute.set.size === 0 || hour.set.size === 0 || dom.set.size === 0 || month.set.size === 0 || dow.set.size === 0) {
+      throw new Error("one or more fields resolve to no valid values");
+    }
+    return { minute: minute, hour: hour, dom: dom, month: month, dow: dow, normalized: trimmed };
+  }
+
+  function joinWithAnd(items) {
+    if (items.length === 1) return items[0];
+    if (items.length === 2) return items[0] + " and " + items[1];
+    return items.slice(0, -1).join(", ") + ", and " + items[items.length - 1];
+  }
+
+  function describeSegment(seg, opts) {
+    var fmt = function (v) {
+      return opts.names ? opts.names[v] : opts.pad ? pad2(v) : String(v);
+    };
+    if (seg.isAny) {
+      return seg.step ? "every " + seg.step + " " + opts.pluralUnit : "every " + opts.singularUnit;
+    }
+    if (seg.isRange) {
+      if (seg.step) return "every " + seg.step + " " + opts.pluralUnit + " from " + fmt(seg.rangeStart) + " through " + fmt(seg.rangeEnd);
+      return fmt(seg.rangeStart) + " through " + fmt(seg.rangeEnd);
+    }
+    if (seg.step) return "every " + seg.step + " " + opts.pluralUnit + " starting at " + fmt(seg.rangeStart);
+    return fmt(seg.rangeStart);
+  }
+
+  function describeField(field, opts) {
+    if (field.isAnyWhole) return "every " + opts.singularUnit;
+    return joinWithAnd(field.segments.map(function (seg) { return describeSegment(seg, opts); }));
+  }
+
+  function isSingleAny(field) {
+    return field.segments.length === 1 && field.segments[0].isAny && field.segments[0].step === null;
+  }
+  function isSingleAnyStep(field) {
+    return field.segments.length === 1 && field.segments[0].isAny && field.segments[0].step;
+  }
+  function isSingleValue(field) {
+    return field.segments.length === 1 && field.segments[0].isSingle;
+  }
+  function isSingleRange(field) {
+    return field.segments.length === 1 && field.segments[0].isRange && !field.segments[0].step;
+  }
+  function isListOfSingles(field) {
+    return field.segments.length > 1 && field.segments.every(function (s) { return s.isSingle; });
+  }
+
+  function humanize(cron) {
+    var minute = cron.minute,
+      hour = cron.hour,
+      dom = cron.dom,
+      month = cron.month,
+      dow = cron.dow;
+
+    var timePhrase;
+    if (isSingleAny(minute) && isSingleAny(hour)) {
+      timePhrase = "Every minute";
+    } else if (isSingleAnyStep(minute) && isSingleAny(hour)) {
+      timePhrase = "Every " + minute.segments[0].step + " minutes";
+    } else if (isSingleValue(minute) && isSingleAny(hour)) {
+      timePhrase = "At minute " + minute.segments[0].rangeStart + " of every hour";
+    } else if (isSingleValue(minute) && isSingleValue(hour)) {
+      timePhrase = "At " + pad2(hour.segments[0].rangeStart) + ":" + pad2(minute.segments[0].rangeStart);
+    } else if (isSingleValue(minute) && isSingleAnyStep(hour)) {
+      timePhrase = "At minute " + minute.segments[0].rangeStart + " past every " + hour.segments[0].step + " hours";
+    } else if (isSingleAny(minute) && isSingleValue(hour)) {
+      timePhrase = "Every minute during hour " + hour.segments[0].rangeStart;
+    } else if (isSingleValue(minute) && isListOfSingles(hour)) {
+      timePhrase =
+        "At " +
+        joinWithAnd(
+          hour.segments.map(function (seg) {
+            return pad2(seg.rangeStart) + ":" + pad2(minute.segments[0].rangeStart);
+          })
+        );
+    } else if (isSingleAnyStep(minute) && isSingleRange(hour)) {
+      timePhrase =
+        "Every " +
+        minute.segments[0].step +
+        " minutes, from " +
+        pad2(hour.segments[0].rangeStart) +
+        ":00 to " +
+        pad2(hour.segments[0].rangeEnd) +
+        ":59";
+    } else {
+      timePhrase =
+        "At " +
+        describeField(minute, { singularUnit: "minute", pluralUnit: "minutes" }) +
+        " past " +
+        describeField(hour, { singularUnit: "hour", pluralUnit: "hours" });
+    }
+
+    var domAny = dom.isAnyWhole;
+    var dowAny = dow.isAnyWhole;
+    var dayPhrase;
+    if (domAny && dowAny) {
+      dayPhrase = "every day";
+    } else if (!domAny && dowAny) {
+      dayPhrase = "on day " + describeField(dom, { singularUnit: "day", pluralUnit: "days" }) + " of the month";
+    } else if (domAny && !dowAny) {
+      dayPhrase = "on " + describeField(dow, { singularUnit: "day", pluralUnit: "days", names: DOW_NAMES });
+    } else {
+      dayPhrase =
+        "on day " +
+        describeField(dom, { singularUnit: "day", pluralUnit: "days" }) +
+        " of the month, or on " +
+        describeField(dow, { singularUnit: "day", pluralUnit: "days", names: DOW_NAMES });
+    }
+
+    var monthPhrase = "";
+    if (!month.isAnyWhole) {
+      monthPhrase = ", in " + describeField(month, { singularUnit: "month", pluralUnit: "months", names: MONTH_NAMES });
+    }
+
+    var sentence = timePhrase + ", " + dayPhrase + monthPhrase + ".";
+    return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+  }
+
+  function fieldSummary(field, names, pad) {
+    return field.raw + " — " + describeField(field, { singularUnit: "unit", pluralUnit: "units", names: names, pad: pad });
+  }
+
+  function renderFieldsTable(cron) {
+    var rows = [
+      ["Minute", cron.minute.raw, describeField(cron.minute, { singularUnit: "minute", pluralUnit: "minutes" })],
+      ["Hour", cron.hour.raw, describeField(cron.hour, { singularUnit: "hour", pluralUnit: "hours" })],
+      ["Day of month", cron.dom.raw, describeField(cron.dom, { singularUnit: "day", pluralUnit: "days" })],
+      ["Month", cron.month.raw, describeField(cron.month, { singularUnit: "month", pluralUnit: "months", names: MONTH_NAMES })],
+      ["Day of week", cron.dow.raw, describeField(cron.dow, { singularUnit: "day", pluralUnit: "days", names: DOW_NAMES })],
+    ];
+    fieldsWrap.innerHTML =
+      '<table class="data-table"><thead><tr><th>Field</th><th>Value</th><th>Meaning</th></tr></thead><tbody>' +
+      rows
+        .map(function (r) {
+          return "<tr><td>" + escapeHtml(r[0]) + '</td><td class="mono">' + escapeHtml(r[1]) + "</td><td>" + escapeHtml(r[2]) + "</td></tr>";
+        })
+        .join("") +
+      "</tbody></table>";
+  }
+
+  function domDowMatch(cron, domVal, dowVal) {
+    var domAny = cron.dom.isAnyWhole;
+    var dowAny = cron.dow.isAnyWhole;
+    if (domAny && dowAny) return true;
+    if (domAny) return cron.dow.set.has(dowVal);
+    if (dowAny) return cron.dom.set.has(domVal);
+    return cron.dom.set.has(domVal) || cron.dow.set.has(dowVal);
+  }
+
+  var MAX_ITER = 4 * 366 * 24 * 60;
+
+  function nextRuns(cron, count, from) {
+    var results = [];
+    var cursor = new Date(from.getTime());
+    cursor.setSeconds(0, 0);
+    cursor.setMinutes(cursor.getMinutes() + 1);
+    var iterations = 0;
+    while (results.length < count && iterations < MAX_ITER) {
+      iterations++;
+      if (
+        cron.minute.set.has(cursor.getMinutes()) &&
+        cron.hour.set.has(cursor.getHours()) &&
+        cron.month.set.has(cursor.getMonth() + 1) &&
+        domDowMatch(cron, cursor.getDate(), cursor.getDay())
+      ) {
+        results.push(new Date(cursor.getTime()));
+      }
+      cursor.setMinutes(cursor.getMinutes() + 1);
+    }
+    return { results: results, truncated: results.length < count };
+  }
+
+  function formatRun(d) {
+    var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return days[d.getDay()] + " " + d.toLocaleDateString() + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+
+  function setVisible(el, visible) {
+    el.classList.toggle("visible", !!visible);
+  }
+
+  function process() {
+    var expr = input.value;
+    errorBox.innerHTML = "";
+    if (!expr.trim()) {
+      [explainCard, fieldsCard, runsCard].forEach(function (c) { setVisible(c, false); });
+      return;
+    }
+    var cron;
+    try {
+      cron = parseCron(expr);
+    } catch (e) {
+      errorBox.innerHTML = '<div class="banner banner-error">Invalid cron expression: ' + escapeHtml(e.message) + "</div>";
+      [explainCard, fieldsCard, runsCard].forEach(function (c) { setVisible(c, false); });
+      return;
+    }
+
+    explainOutput.textContent = humanize(cron);
+    renderFieldsTable(cron);
+    setVisible(explainCard, true);
+    setVisible(fieldsCard, true);
+    setVisible(runsCard, true);
+
+    var count = parseInt(runCount.value, 10);
+    if (!Number.isFinite(count) || count < 1) count = 5;
+    if (count > 50) count = 50;
+    var run = nextRuns(cron, count, new Date());
+    if (run.results.length === 0) {
+      runsOutput.textContent = "No matching run time found in the next 4 years — this expression likely never fires (e.g. day 30 in February).";
+    } else {
+      var lines = run.results.map(formatRun);
+      if (run.truncated) lines.push("(only " + run.results.length + " matches found within 4 years)");
+      runsOutput.textContent = lines.join("\n");
+    }
+  }
+
+  input.addEventListener("input", process);
+  runCount.addEventListener("input", process);
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    var target = document.getElementById(btn.getAttribute("data-copy-target"));
+    if (!target) return;
+    navigator.clipboard.writeText(target.textContent).then(function () {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1200);
+    });
+  });
+
+  process();
+})();
+</script>
+</body>
+</html>
