@@ -52,40 +52,8 @@ var VIDEO_OPS = {
 };
 
 var VideoOpsRunner = (function () {
-  function waitFor(check, timeoutMs, intervalMs) {
-    return new Promise(function (resolve, reject) {
-      var start = Date.now();
-      (function poll() {
-        var v;
-        try {
-          v = check();
-        } catch (e) {
-          v = undefined;
-        }
-        if (v) return resolve(v);
-        if (Date.now() - start > timeoutMs) return reject(new Error("Timed out waiting."));
-        setTimeout(poll, intervalMs || 150);
-      })();
-    });
-  }
-
-  function waitForLoad(iframe, timeoutMs) {
-    return new Promise(function (resolve, reject) {
-      var done = false;
-      var timer = setTimeout(function () {
-        if (!done) {
-          done = true;
-          reject(new Error("Tool page took too long to load."));
-        }
-      }, timeoutMs);
-      iframe.addEventListener("load", function () {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        resolve();
-      });
-    });
-  }
+  var waitFor = BulkCommon.waitFor;
+  var waitForLoad = BulkCommon.waitForLoad;
 
   /**
    * Injects `file` into the iframe's #file-input as if the user had chosen it.
@@ -172,10 +140,7 @@ var VideoOpsRunner = (function () {
    * is torn down before resolving/rejecting so memory doesn't accumulate across files.
    */
   function run(op, file, opts, onProgress) {
-    var iframe = document.createElement("iframe");
-    iframe.className = "worker-frame";
-    document.body.appendChild(iframe);
-    iframe.src = op.page;
+    var iframe = BulkCommon.createHiddenIframe(op.page);
 
     function cleanup() {
       iframe.remove();
