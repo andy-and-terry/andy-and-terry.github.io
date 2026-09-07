@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pomodoro Timer</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Productivity Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Pomodoro Timer</h1>
+  <p class="subtitle">
+    Work in focused intervals with timed breaks. Settings and progress are saved automatically.
+  </p>
+
+  <div class="card">
+    <div class="timer-display">
+      <div class="timer-phase" id="phase-label">Work</div>
+      <div class="timer-clock" id="clock">25:00</div>
+      <div class="timer-meta" id="session-meta">Session 1 of 4</div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+
+    <div class="btn-row" style="justify-content: center; margin-top: 24px">
+      <button class="btn btn-primary" id="btn-start">Start</button>
+      <button class="btn btn-secondary" id="btn-pause" disabled>Pause</button>
+      <button class="btn btn-secondary" id="btn-skip">Skip</button>
+      <button class="btn btn-secondary" id="btn-reset">Reset</button>
+    </div>
+
+    <div id="notify-banner" class="banner banner-warning" style="display: none; margin-top: 20px; text-align: center">
+      <span id="notify-text">Enable notifications to get alerted when a session ends.</span>
+      <button class="btn btn-secondary" id="btn-enable-notify" style="margin-left: 10px">Enable</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Settings</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="work-min">Work (minutes)</label>
+        <input type="number" id="work-min" min="1" max="180" step="1" />
+      </div>
+      <div class="field">
+        <label for="short-min">Short break (minutes)</label>
+        <input type="number" id="short-min" min="1" max="180" step="1" />
+      </div>
+      <div class="field">
+        <label for="long-min">Long break (minutes)</label>
+        <input type="number" id="long-min" min="1" max="180" step="1" />
+      </div>
+      <div class="field">
+        <label for="sessions-until-long">Sessions before long break</label>
+        <input type="number" id="sessions-until-long" min="1" max="12" step="1" />
+      </div>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="auto-start" /> Auto-start the next session</label>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="sound-enabled" /> Play a sound when a session ends</label>
+    </div>
+    <p class="hint" id="settings-hint">Pause the timer to change settings.</p>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No data leaves your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "productivity-pomodoro";
+  var DEFAULT_SETTINGS = {
+    work: 25,
+    short: 5,
+    long: 15,
+    sessionsUntilLong: 4,
+    autoStart: false,
+    soundEnabled: true,
+  };
+
+  var state = loadState();
+
+  var el = {
+    phaseLabel: document.getElementById("phase-label"),
+    clock: document.getElementById("clock"),
+    sessionMeta: document.getElementById("session-meta"),
+    progressFill: document.getElementById("progress-fill"),
+    btnStart: document.getElementById("btn-start"),
+    btnPause: document.getElementById("btn-pause"),
+    btnSkip: document.getElementById("btn-skip"),
+    btnReset: document.getElementById("btn-reset"),
+    workMin: document.getElementById("work-min"),
+    shortMin: document.getElementById("short-min"),
+    longMin: document.getElementById("long-min"),
+    sessionsUntilLong: document.getElementById("sessions-until-long"),
+    autoStart: document.getElementById("auto-start"),
+    soundEnabled: document.getElementById("sound-enabled"),
+    settingsHint: document.getElementById("settings-hint"),
+    notifyBanner: document.getElementById("notify-banner"),
+    notifyText: document.getElementById("notify-text"),
+    btnEnableNotify: document.getElementById("btn-enable-notify"),
+  };
+
+  var settingInputs = [el.workMin, el.shortMin, el.longMin, el.sessionsUntilLong, el.autoStart, el.soundEnabled];
+
+  function loadState() {
+    var fallback = {
+      settings: Object.assign({}, DEFAULT_SETTINGS),
+      phase: "work",
+      completedWorkSessions: 0,
+      running: false,
+      endAt: null,
+      remainingMs: DEFAULT_SETTINGS.work * 60000,
+    };
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return fallback;
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return fallback;
+      var settings = Object.assign({}, DEFAULT_SETTINGS, parsed.settings || {});
+      var phase = ["work", "short", "long"].indexOf(parsed.phase) !== -1 ? parsed.phase : "work";
+      var completed = Number.isFinite(parsed.completedWorkSessions) ? parsed.completedWorkSessions : 0;
+      var remaining = Number.isFinite(parsed.remainingMs) ? parsed.remainingMs : phaseDurationMs(phase, settings);
+      var running = !!parsed.running && Number.isFinite(parsed.endAt);
+      if (running) {
+        remaining = parsed.endAt - Date.now();
+      }
+      return {
+        settings: settings,
+        phase: phase,
+        completedWorkSessions: completed,
+        running: running && remaining > 0,
+        endAt: running ? parsed.endAt : null,
+        remainingMs: Math.max(0, remaining),
+      };
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      /* localStorage unavailable (private mode / quota) — timer still works this session */
+    }
+  }
+
+  function phaseDurationMs(phase, settings) {
+    var minutes = phase === "work" ? settings.work : phase === "short" ? settings.short : settings.long;
+    minutes = Math.min(180, Math.max(1, Math.round(Number(minutes)) || 1));
+    return minutes * 60000;
+  }
+
+  function phaseLabelText(phase) {
+    return phase === "work" ? "Work" : phase === "short" ? "Short Break" : "Long Break";
+  }
+
+  function formatClock(ms) {
+    var totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    var m = Math.floor(totalSeconds / 60);
+    var s = totalSeconds % 60;
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+
+  function render() {
+    el.phaseLabel.textContent = phaseLabelText(state.phase);
+    var remaining = state.running ? Math.max(0, state.endAt - Date.now()) : state.remainingMs;
+    el.clock.textContent = formatClock(remaining);
+    document.title = formatClock(remaining) + " — " + phaseLabelText(state.phase) + " — Pomodoro Timer";
+
+    var total = phaseDurationMs(state.phase, state.settings);
+    var pct = total > 0 ? Math.min(100, Math.max(0, 100 - (remaining / total) * 100)) : 0;
+    el.progressFill.style.width = pct + "%";
+
+    var n = state.settings.sessionsUntilLong;
+    var current = (state.completedWorkSessions % n) + 1;
+    el.sessionMeta.textContent =
+      state.phase === "work" ? "Session " + current + " of " + n : "Break — next up: session " + current + " of " + n;
+
+    el.btnStart.disabled = state.running;
+    el.btnPause.disabled = !state.running;
+
+    settingInputs.forEach(function (input) {
+      input.disabled = state.running;
+    });
+    el.settingsHint.style.display = state.running ? "block" : "none";
+
+    el.workMin.value = state.settings.work;
+    el.shortMin.value = state.settings.short;
+    el.longMin.value = state.settings.long;
+    el.sessionsUntilLong.value = state.settings.sessionsUntilLong;
+    el.autoStart.checked = !!state.settings.autoStart;
+    el.soundEnabled.checked = !!state.settings.soundEnabled;
+
+    updateNotifyBanner();
+  }
+
+  var tickHandle = null;
+  function startTicking() {
+    if (tickHandle) return;
+    tickHandle = setInterval(tick, 250);
+  }
+  function stopTicking() {
+    if (tickHandle) {
+      clearInterval(tickHandle);
+      tickHandle = null;
+    }
+  }
+
+  function tick() {
+    if (!state.running) return;
+    var remaining = state.endAt - Date.now();
+    if (remaining <= 0) {
+      completePhase();
+      return;
+    }
+    el.clock.textContent = formatClock(remaining);
+    document.title = formatClock(remaining) + " — " + phaseLabelText(state.phase) + " — Pomodoro Timer";
+    var total = phaseDurationMs(state.phase, state.settings);
+    var pct = total > 0 ? Math.min(100, Math.max(0, 100 - (remaining / total) * 100)) : 0;
+    el.progressFill.style.width = pct + "%";
+  }
+
+  function nextPhase() {
+    if (state.phase === "work") {
+      var completed = state.completedWorkSessions + 1;
+      var isLong = completed % state.settings.sessionsUntilLong === 0;
+      return { phase: isLong ? "long" : "short", completedWorkSessions: completed };
+    }
+    return { phase: "work", completedWorkSessions: state.completedWorkSessions };
+  }
+
+  function completePhase() {
+    var finishedPhase = state.phase;
+    var advance = nextPhase();
+    state.phase = advance.phase;
+    state.completedWorkSessions = advance.completedWorkSessions;
+    state.remainingMs = phaseDurationMs(state.phase, state.settings);
+    state.running = false;
+    state.endAt = null;
+
+    notifyCompletion(finishedPhase, state.phase);
+
+    if (state.settings.autoStart) {
+      startTimer();
+    } else {
+      stopTicking();
+      saveState();
+      render();
+    }
+  }
+
+  function notifyCompletion(finishedPhase, upcomingPhase) {
+    if (state.settings.soundEnabled) playBeep();
+    var title = phaseLabelText(finishedPhase) + " finished";
+    var body = "Time for " + phaseLabelText(upcomingPhase).toLowerCase() + ".";
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        new Notification(title, { body: body });
+      } catch (e) {
+        /* some browsers require a service worker for Notification(); ignore if unsupported */
+      }
+    }
+  }
+
+  var audioCtx = null;
+  function playBeep() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var now = audioCtx.currentTime;
+      [0, 0.22, 0.44].forEach(function (offset) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.2);
+      });
+    } catch (e) {
+      /* Web Audio unavailable — silently skip the sound */
+    }
+  }
+
+  function startTimer() {
+    if (state.running) return;
+    var remaining = state.remainingMs > 0 ? state.remainingMs : phaseDurationMs(state.phase, state.settings);
+    state.running = true;
+    state.endAt = Date.now() + remaining;
+    saveState();
+    startTicking();
+    render();
+  }
+
+  function pauseTimer() {
+    if (!state.running) return;
+    state.remainingMs = Math.max(0, state.endAt - Date.now());
+    state.running = false;
+    state.endAt = null;
+    stopTicking();
+    saveState();
+    render();
+  }
+
+  function resetTimer() {
+    state.running = false;
+    state.endAt = null;
+    state.remainingMs = phaseDurationMs(state.phase, state.settings);
+    stopTicking();
+    saveState();
+    render();
+  }
+
+  function skipPhase() {
+    var advance = nextPhase();
+    state.phase = advance.phase;
+    state.completedWorkSessions = advance.completedWorkSessions;
+    state.running = false;
+    state.endAt = null;
+    state.remainingMs = phaseDurationMs(state.phase, state.settings);
+    stopTicking();
+    saveState();
+    render();
+  }
+
+  function updateNotifyBanner() {
+    if (typeof Notification === "undefined") {
+      el.notifyBanner.style.display = "none";
+      return;
+    }
+    if (Notification.permission === "granted" || Notification.permission === "denied") {
+      el.notifyBanner.style.display = "none";
+    } else {
+      el.notifyBanner.style.display = "block";
+    }
+  }
+
+  el.btnStart.addEventListener("click", startTimer);
+  el.btnPause.addEventListener("click", pauseTimer);
+  el.btnReset.addEventListener("click", resetTimer);
+  el.btnSkip.addEventListener("click", skipPhase);
+
+  el.btnEnableNotify.addEventListener("click", function () {
+    if (typeof Notification === "undefined") return;
+    Notification.requestPermission().then(function () {
+      updateNotifyBanner();
+    });
+  });
+
+  function clampInt(value, min, max, fallback) {
+    var n = Math.round(Number(value));
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function applySettingsFromInputs() {
+    if (state.running) return;
+    state.settings.work = clampInt(el.workMin.value, 1, 180, state.settings.work);
+    state.settings.short = clampInt(el.shortMin.value, 1, 180, state.settings.short);
+    state.settings.long = clampInt(el.longMin.value, 1, 180, state.settings.long);
+    state.settings.sessionsUntilLong = clampInt(el.sessionsUntilLong.value, 1, 12, state.settings.sessionsUntilLong);
+    state.remainingMs = phaseDurationMs(state.phase, state.settings);
+    saveState();
+    render();
+  }
+
+  [el.workMin, el.shortMin, el.longMin, el.sessionsUntilLong].forEach(function (input) {
+    input.addEventListener("change", applySettingsFromInputs);
+  });
+
+  el.autoStart.addEventListener("change", function () {
+    state.settings.autoStart = el.autoStart.checked;
+    saveState();
+  });
+
+  el.soundEnabled.addEventListener("change", function () {
+    state.settings.soundEnabled = el.soundEnabled.checked;
+    saveState();
+  });
+
+  if (state.running) startTicking();
+  render();
+})();
+</script>
+</body>
+</html>
