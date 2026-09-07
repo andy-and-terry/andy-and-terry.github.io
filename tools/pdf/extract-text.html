@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Extract Text — PDF Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📄 PDF Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Extract Text</h1>
+  <p class="subtitle">Pull the plain text out of a PDF, page by page. Scanned pages with no text layer will come back empty.</p>
+
+  <div class="card">
+    <h2>1. Choose a PDF</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose a PDF file">
+      <div><strong>Click to choose</strong> or drag a PDF file here</div>
+      <input type="file" id="file-input" accept="application/pdf" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span><span id="file-size"></span>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>2. Extracted text</h2>
+    <div class="field">
+      <label>Text</label>
+      <textarea id="text-output" rows="18" readonly></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="copy-btn" type="button">Copy to clipboard</button>
+      <a class="btn btn-primary" id="download-link" download>Download .txt</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via pdf.js. No files leave your device.</footer>
+
+<script src="lib/pdf.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/pdf-common.js"></script>
+<script src="js/extract-text.js"></script>
+</body>
+</html>

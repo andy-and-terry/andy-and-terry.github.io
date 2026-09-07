@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDF to Image — PDF Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📄 PDF Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>PDF to Image</h1>
+  <p class="subtitle">Export each page of a PDF as a PNG or JPG image at your chosen resolution.</p>
+
+  <div class="card">
+    <h2>1. Choose a PDF</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose a PDF file">
+      <div><strong>Click to choose</strong> or drag a PDF file here</div>
+      <input type="file" id="file-input" accept="application/pdf" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span><span id="file-size"></span>
+    </div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Settings</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Format</label>
+        <select id="format-select">
+          <option value="image/png">PNG</option>
+          <option value="image/jpeg" selected>JPG</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Resolution <span class="value-pill" id="dpi-value">150 DPI</span></label>
+        <input type="range" id="dpi-input" min="72" max="300" step="6" value="150" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Pages</label>
+      <input type="text" id="ranges-input" placeholder="Leave blank for all pages, or e.g. 1-3, 5" />
+    </div>
+    <div class="field">
+      <label>Output filename prefix</label>
+      <input type="text" id="output-name" value="page" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Export images</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Results</h2>
+    <div class="thumb-grid" id="output-grid"></div>
+    <ul class="file-list" id="output-list"></ul>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via pdf.js. No files leave your device.</footer>
+
+<script src="lib/pdf.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/pdf-common.js"></script>
+<script src="js/pdf-to-image.js"></script>
+</body>
+</html>

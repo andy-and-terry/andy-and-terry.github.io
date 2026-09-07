@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Image to PDF — PDF Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📄 PDF Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Image to PDF</h1>
+  <p class="subtitle">Combine JPG or PNG images into a single PDF, one image per page. Drag thumbnails to reorder before building.</p>
+
+  <div class="card">
+    <h2>1. Add images</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose image files">
+      <div><strong>Click to add</strong> or drag JPG/PNG images here (add more anytime)</div>
+      <input type="file" id="file-input" accept="image/png,image/jpeg" multiple hidden />
+    </div>
+    <div class="thumb-grid" id="thumb-grid" style="margin-top:14px"></div>
+    <div class="hint">Drag thumbnails to reorder. Click × to remove one.</div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Settings</h2>
+    <div class="field">
+      <label>Page size</label>
+      <select id="page-size-select">
+        <option value="fit" selected>Fit to image size</option>
+        <option value="a4">A4 (fit image, centered)</option>
+        <option value="letter">Letter (fit image, centered)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" value="images.pdf" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Create PDF</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via pdf-lib. No files leave your device.</footer>
+
+<script src="lib/pdf-lib.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/pdf-common.js"></script>
+<script src="js/image-to-pdf.js"></script>
+</body>
+</html>
