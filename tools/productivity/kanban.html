@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kanban Board</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Productivity Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Kanban Board</h1>
+  <p class="subtitle">
+    Drag cards between columns, or use the arrow buttons. Your board is saved automatically.
+  </p>
+
+  <div class="btn-row" style="justify-content: flex-end; margin-bottom: 14px">
+    <button class="btn btn-secondary" id="btn-clear-done">Clear Done</button>
+  </div>
+
+  <div class="board" id="board"></div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No data leaves your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "productivity-kanban";
+  var COLUMNS = [
+    { id: "todo", label: "To Do" },
+    { id: "inprogress", label: "In Progress" },
+    { id: "done", label: "Done" },
+  ];
+
+  var board = loadBoard();
+  var boardEl = document.getElementById("board");
+  var draggedId = null;
+
+  function loadBoard() {
+    var fallback = { todo: [], inprogress: [], done: [] };
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return fallback;
+      var parsed = JSON.parse(raw);
+      COLUMNS.forEach(function (col) {
+        if (!Array.isArray(parsed[col.id])) parsed[col.id] = [];
+        parsed[col.id] = parsed[col.id]
+          .filter(function (card) {
+            return card && typeof card.id === "string" && typeof card.text === "string";
+          })
+          .map(function (card) {
+            return { id: card.id, text: card.text };
+          });
+      });
+      return { todo: parsed.todo, inprogress: parsed.inprogress, done: parsed.done };
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveBoard() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
+    } catch (e) {
+      /* localStorage unavailable — board still works this session */
+    }
+  }
+
+  function makeId() {
+    return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function findCard(cardId) {
+    for (var i = 0; i < COLUMNS.length; i++) {
+      var colId = COLUMNS[i].id;
+      var list = board[colId];
+      for (var j = 0; j < list.length; j++) {
+        if (list[j].id === cardId) return { colId: colId, index: j };
+      }
+    }
+    return null;
+  }
+
+  function moveCard(cardId, targetColId, targetIndex) {
+    var loc = findCard(cardId);
+    if (!loc) return;
+    var card = board[loc.colId].splice(loc.index, 1)[0];
+    var targetList = board[targetColId];
+    if (loc.colId === targetColId && loc.index < targetIndex) targetIndex -= 1;
+    if (targetIndex == null || targetIndex > targetList.length) targetIndex = targetList.length;
+    targetList.splice(Math.max(0, targetIndex), 0, card);
+    saveBoard();
+    render();
+  }
+
+  function moveCardToAdjacentColumn(cardId, direction) {
+    var loc = findCard(cardId);
+    if (!loc) return;
+    var colIndex = COLUMNS.findIndex(function (c) {
+      return c.id === loc.colId;
+    });
+    var newIndex = colIndex + direction;
+    if (newIndex < 0 || newIndex >= COLUMNS.length) return;
+    var card = board[loc.colId].splice(loc.index, 1)[0];
+    board[COLUMNS[newIndex].id].push(card);
+    saveBoard();
+    render();
+  }
+
+  function deleteCard(cardId) {
+    var loc = findCard(cardId);
+    if (!loc) return;
+    board[loc.colId].splice(loc.index, 1);
+    saveBoard();
+    render();
+  }
+
+  function addCard(colId, text) {
+    var trimmed = text.trim();
+    if (!trimmed) return;
+    board[colId].push({ id: makeId(), text: trimmed });
+    saveBoard();
+    render();
+  }
+
+  function render() {
+    boardEl.innerHTML = "";
+    COLUMNS.forEach(function (col) {
+      var list = board[col.id];
+
+      var colEl = document.createElement("div");
+      colEl.className = "board-col";
+      colEl.dataset.col = col.id;
+
+      var heading = document.createElement("h2");
+      heading.innerHTML =
+        escapeHtml(col.label) + '<span class="count">' + list.length + "</span>";
+      colEl.appendChild(heading);
+
+      var cardsEl = document.createElement("div");
+      cardsEl.className = "board-cards";
+
+      if (list.length === 0) {
+        var empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No cards yet";
+        cardsEl.appendChild(empty);
+      }
+
+      list.forEach(function (card) {
+        cardsEl.appendChild(renderCard(card, col.id));
+      });
+
+      cardsEl.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        colEl.classList.add("dragover");
+        var afterEl = getDragAfterElement(cardsEl, e.clientY);
+        var draggingEl = boardEl.querySelector(".dragging");
+        if (!draggingEl) return;
+        if (afterEl == null) {
+          cardsEl.appendChild(draggingEl);
+        } else {
+          cardsEl.insertBefore(draggingEl, afterEl);
+        }
+      });
+      cardsEl.addEventListener("dragleave", function (e) {
+        if (e.target === cardsEl) colEl.classList.remove("dragover");
+      });
+      cardsEl.addEventListener("drop", function (e) {
+        e.preventDefault();
+        colEl.classList.remove("dragover");
+        if (!draggedId) return;
+        var domCards = Array.prototype.slice.call(cardsEl.querySelectorAll(".board-card"));
+        var targetIndex = domCards.findIndex(function (el) {
+          return el.dataset.id === draggedId;
+        });
+        moveCard(draggedId, col.id, targetIndex);
+      });
+
+      colEl.appendChild(cardsEl);
+
+      var form = document.createElement("form");
+      form.className = "add-card-form";
+      form.innerHTML =
+        '<input type="text" placeholder="Add a card…" maxlength="280" aria-label="New card text for ' +
+        escapeHtml(col.label) +
+        '" /><button type="submit" class="btn btn-secondary">Add</button>';
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var input = form.querySelector("input");
+        addCard(col.id, input.value);
+        input.value = "";
+        input.focus();
+      });
+      colEl.appendChild(form);
+
+      boardEl.appendChild(colEl);
+    });
+  }
+
+  function getDragAfterElement(container, y) {
+    var cards = Array.prototype.slice.call(
+      container.querySelectorAll(".board-card:not(.dragging)")
+    );
+    var closest = { offset: -Infinity, element: null };
+    cards.forEach(function (child) {
+      var box = child.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        closest = { offset: offset, element: child };
+      }
+    });
+    return closest.element;
+  }
+
+  function renderCard(card, colId) {
+    var colIndex = COLUMNS.findIndex(function (c) {
+      return c.id === colId;
+    });
+    var cardEl = document.createElement("div");
+    cardEl.className = "board-card";
+    cardEl.draggable = true;
+    cardEl.dataset.id = card.id;
+
+    var top = document.createElement("div");
+    top.className = "board-card-top";
+
+    var textEl = document.createElement("div");
+    textEl.className = "board-card-text";
+    textEl.textContent = card.text;
+    top.appendChild(textEl);
+
+    var actions = document.createElement("div");
+    actions.className = "board-card-actions";
+
+    if (colIndex > 0) {
+      var left = document.createElement("button");
+      left.className = "btn-icon";
+      left.type = "button";
+      left.title = "Move to " + COLUMNS[colIndex - 1].label;
+      left.setAttribute("aria-label", "Move to " + COLUMNS[colIndex - 1].label);
+      left.textContent = "◀";
+      left.addEventListener("click", function () {
+        moveCardToAdjacentColumn(card.id, -1);
+      });
+      actions.appendChild(left);
+    }
+
+    if (colIndex < COLUMNS.length - 1) {
+      var right = document.createElement("button");
+      right.className = "btn-icon";
+      right.type = "button";
+      right.title = "Move to " + COLUMNS[colIndex + 1].label;
+      right.setAttribute("aria-label", "Move to " + COLUMNS[colIndex + 1].label);
+      right.textContent = "▶";
+      right.addEventListener("click", function () {
+        moveCardToAdjacentColumn(card.id, 1);
+      });
+      actions.appendChild(right);
+    }
+
+    var del = document.createElement("button");
+    del.className = "btn-icon";
+    del.type = "button";
+    del.title = "Delete card";
+    del.setAttribute("aria-label", "Delete card");
+    del.textContent = "✕";
+    del.addEventListener("click", function () {
+      deleteCard(card.id);
+    });
+    actions.appendChild(del);
+
+    top.appendChild(actions);
+    cardEl.appendChild(top);
+
+    cardEl.addEventListener("dragstart", function () {
+      draggedId = card.id;
+      setTimeout(function () {
+        cardEl.classList.add("dragging");
+      }, 0);
+    });
+    cardEl.addEventListener("dragend", function () {
+      cardEl.classList.remove("dragging");
+      draggedId = null;
+      render();
+    });
+
+    return cardEl;
+  }
+
+  document.getElementById("btn-clear-done").addEventListener("click", function () {
+    if (board.done.length === 0) return;
+    board.done = [];
+    saveBoard();
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timer / Stopwatch</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Productivity Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Timer / Stopwatch</h1>
+  <p class="subtitle">A countdown timer and a lap-tracking stopwatch, in one tool.</p>
+
+  <div class="tab-row">
+    <button class="tab-btn active" id="tab-timer" type="button">Countdown Timer</button>
+    <button class="tab-btn" id="tab-stopwatch" type="button">Stopwatch</button>
+  </div>
+
+  <div class="card" id="panel-timer">
+    <div class="timer-display">
+      <div class="timer-clock" id="timer-clock">00:05:00</div>
+      <div class="progress-track"><div class="progress-fill" id="timer-progress"></div></div>
+    </div>
+
+    <div class="field-row" style="margin-top: 24px">
+      <div class="field">
+        <label for="timer-hours">Hours</label>
+        <input type="number" id="timer-hours" min="0" max="23" step="1" value="0" />
+      </div>
+      <div class="field">
+        <label for="timer-minutes">Minutes</label>
+        <input type="number" id="timer-minutes" min="0" max="59" step="1" value="5" />
+      </div>
+      <div class="field">
+        <label for="timer-seconds">Seconds</label>
+        <input type="number" id="timer-seconds" min="0" max="59" step="1" value="0" />
+      </div>
+    </div>
+
+    <div class="btn-row" style="justify-content: center">
+      <button class="btn btn-primary" id="timer-start">Start</button>
+      <button class="btn btn-secondary" id="timer-pause" disabled>Pause</button>
+      <button class="btn btn-secondary" id="timer-reset">Reset</button>
+    </div>
+
+    <div id="timer-banner" class="banner banner-error" style="display: none; margin-top: 16px; text-align: center">
+      Nothing to start — set a duration or click Reset.
+    </div>
+  </div>
+
+  <div class="card" id="panel-stopwatch" style="display: none">
+    <div class="timer-display">
+      <div class="timer-clock" id="stopwatch-clock">00:00.00</div>
+    </div>
+
+    <div class="btn-row" style="justify-content: center">
+      <button class="btn btn-primary" id="stopwatch-start">Start</button>
+      <button class="btn btn-secondary" id="stopwatch-pause" disabled>Pause</button>
+      <button class="btn btn-secondary" id="stopwatch-lap" disabled>Lap</button>
+      <button class="btn btn-secondary" id="stopwatch-reset" disabled>Reset</button>
+    </div>
+
+    <ul class="lap-list" id="lap-list"></ul>
+    <div class="empty-state" id="lap-empty">No laps yet.</div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No data leaves your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function pad(n, len) {
+    return String(n).padStart(len || 2, "0");
+  }
+
+  var audioCtx = null;
+  function playBeep() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var now = audioCtx.currentTime;
+      [0, 0.22, 0.44].forEach(function (offset) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.2);
+      });
+    } catch (e) {
+      /* Web Audio unavailable — silently skip the sound */
+    }
+  }
+
+  function notify(title, body) {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        new Notification(title, { body: body });
+      } catch (e) {
+        /* some browsers require a service worker for Notification(); ignore if unsupported */
+      }
+    }
+  }
+
+  // ---- Tabs ----
+  var tabTimer = document.getElementById("tab-timer");
+  var tabStopwatch = document.getElementById("tab-stopwatch");
+  var panelTimer = document.getElementById("panel-timer");
+  var panelStopwatch = document.getElementById("panel-stopwatch");
+
+  tabTimer.addEventListener("click", function () {
+    tabTimer.classList.add("active");
+    tabStopwatch.classList.remove("active");
+    panelTimer.style.display = "block";
+    panelStopwatch.style.display = "none";
+  });
+  tabStopwatch.addEventListener("click", function () {
+    tabStopwatch.classList.add("active");
+    tabTimer.classList.remove("active");
+    panelStopwatch.style.display = "block";
+    panelTimer.style.display = "none";
+  });
+
+  // ---- Countdown Timer ----
+  var timerEl = {
+    clock: document.getElementById("timer-clock"),
+    progress: document.getElementById("timer-progress"),
+    hours: document.getElementById("timer-hours"),
+    minutes: document.getElementById("timer-minutes"),
+    seconds: document.getElementById("timer-seconds"),
+    start: document.getElementById("timer-start"),
+    pause: document.getElementById("timer-pause"),
+    reset: document.getElementById("timer-reset"),
+    banner: document.getElementById("timer-banner"),
+  };
+
+  var timer = {
+    running: false,
+    endAt: null,
+    remainingMs: 0,
+    totalMs: 0,
+    tickHandle: null,
+  };
+
+  function clampInt(value, min, max) {
+    var n = Math.round(Number(value));
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function readTimerInputMs() {
+    var h = clampInt(timerEl.hours.value, 0, 23);
+    var m = clampInt(timerEl.minutes.value, 0, 59);
+    var s = clampInt(timerEl.seconds.value, 0, 59);
+    timerEl.hours.value = h;
+    timerEl.minutes.value = m;
+    timerEl.seconds.value = s;
+    return (h * 3600 + m * 60 + s) * 1000;
+  }
+
+  function formatCountdown(ms) {
+    var totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+    var h = Math.floor(totalSeconds / 3600);
+    var m = Math.floor((totalSeconds % 3600) / 60);
+    var s = totalSeconds % 60;
+    return pad(h) + ":" + pad(m) + ":" + pad(s);
+  }
+
+  function renderTimer() {
+    var remaining = timer.running ? Math.max(0, timer.endAt - Date.now()) : timer.remainingMs;
+    timerEl.clock.textContent = formatCountdown(remaining);
+    var pct = timer.totalMs > 0 ? Math.min(100, Math.max(0, 100 - (remaining / timer.totalMs) * 100)) : 0;
+    timerEl.progress.style.width = pct + "%";
+    timerEl.start.disabled = timer.running;
+    timerEl.pause.disabled = !timer.running;
+    [timerEl.hours, timerEl.minutes, timerEl.seconds].forEach(function (input) {
+      input.disabled = timer.running;
+    });
+  }
+
+  function timerTick() {
+    if (!timer.running) return;
+    var remaining = timer.endAt - Date.now();
+    if (remaining <= 0) {
+      timer.running = false;
+      timer.endAt = null;
+      timer.remainingMs = 0;
+      stopTimerTicking();
+      renderTimer();
+      playBeep();
+      notify("Timer finished", "Your countdown timer has ended.");
+      return;
+    }
+    timerEl.clock.textContent = formatCountdown(remaining);
+    var pct = timer.totalMs > 0 ? Math.min(100, Math.max(0, 100 - (remaining / timer.totalMs) * 100)) : 0;
+    timerEl.progress.style.width = pct + "%";
+  }
+
+  function startTimerTicking() {
+    if (timer.tickHandle) return;
+    timer.tickHandle = setInterval(timerTick, 250);
+  }
+  function stopTimerTicking() {
+    if (timer.tickHandle) {
+      clearInterval(timer.tickHandle);
+      timer.tickHandle = null;
+    }
+  }
+
+  timerEl.start.addEventListener("click", function () {
+    if (timer.running) return;
+    if (timer.remainingMs <= 0) {
+      timerEl.banner.style.display = "block";
+      return;
+    }
+    timerEl.banner.style.display = "none";
+    timer.running = true;
+    timer.endAt = Date.now() + timer.remainingMs;
+    startTimerTicking();
+    renderTimer();
+  });
+
+  timerEl.pause.addEventListener("click", function () {
+    if (!timer.running) return;
+    timer.remainingMs = Math.max(0, timer.endAt - Date.now());
+    timer.running = false;
+    timer.endAt = null;
+    stopTimerTicking();
+    renderTimer();
+  });
+
+  timerEl.reset.addEventListener("click", function () {
+    timer.running = false;
+    timer.endAt = null;
+    stopTimerTicking();
+    timer.totalMs = readTimerInputMs();
+    timer.remainingMs = timer.totalMs;
+    timerEl.banner.style.display = "none";
+    renderTimer();
+  });
+
+  [timerEl.hours, timerEl.minutes, timerEl.seconds].forEach(function (input) {
+    input.addEventListener("change", function () {
+      if (timer.running) return;
+      timer.totalMs = readTimerInputMs();
+      timer.remainingMs = timer.totalMs;
+      renderTimer();
+    });
+  });
+
+  timer.totalMs = readTimerInputMs();
+  timer.remainingMs = timer.totalMs;
+  renderTimer();
+
+  // ---- Stopwatch ----
+  var swEl = {
+    clock: document.getElementById("stopwatch-clock"),
+    start: document.getElementById("stopwatch-start"),
+    pause: document.getElementById("stopwatch-pause"),
+    lap: document.getElementById("stopwatch-lap"),
+    reset: document.getElementById("stopwatch-reset"),
+    lapList: document.getElementById("lap-list"),
+    lapEmpty: document.getElementById("lap-empty"),
+  };
+
+  var sw = {
+    running: false,
+    startedAt: null,
+    accumulatedMs: 0,
+    laps: [],
+    tickHandle: null,
+  };
+
+  function formatStopwatch(ms) {
+    var totalCentis = Math.floor(ms / 10);
+    var centis = totalCentis % 100;
+    var totalSeconds = Math.floor(totalCentis / 100);
+    var s = totalSeconds % 60;
+    var totalMinutes = Math.floor(totalSeconds / 60);
+    var m = totalMinutes % 60;
+    var h = Math.floor(totalMinutes / 60);
+    var base = (h > 0 ? pad(h) + ":" : "") + pad(m) + ":" + pad(s);
+    return base + "." + pad(centis);
+  }
+
+  function swElapsed() {
+    return sw.accumulatedMs + (sw.running ? Date.now() - sw.startedAt : 0);
+  }
+
+  function renderStopwatch() {
+    swEl.clock.textContent = formatStopwatch(swElapsed());
+    swEl.start.disabled = sw.running;
+    swEl.start.textContent = sw.accumulatedMs > 0 && !sw.running ? "Resume" : "Start";
+    swEl.pause.disabled = !sw.running;
+    swEl.lap.disabled = !sw.running;
+    swEl.reset.disabled = sw.running || (sw.accumulatedMs === 0 && sw.laps.length === 0);
+    swEl.lapEmpty.style.display = sw.laps.length === 0 ? "block" : "none";
+  }
+
+  function startSwTicking() {
+    if (sw.tickHandle) return;
+    sw.tickHandle = setInterval(function () {
+      swEl.clock.textContent = formatStopwatch(swElapsed());
+    }, 30);
+  }
+  function stopSwTicking() {
+    if (sw.tickHandle) {
+      clearInterval(sw.tickHandle);
+      sw.tickHandle = null;
+    }
+  }
+
+  function renderLaps() {
+    swEl.lapList.innerHTML = "";
+    for (var i = sw.laps.length - 1; i >= 0; i--) {
+      var lap = sw.laps[i];
+      var li = document.createElement("li");
+      li.innerHTML =
+        "<span>Lap " + (i + 1) + "</span><span>+" + formatStopwatch(lap.split) + "</span><span>" +
+        formatStopwatch(lap.total) +
+        "</span>";
+      swEl.lapList.appendChild(li);
+    }
+    swEl.lapEmpty.style.display = sw.laps.length === 0 ? "block" : "none";
+  }
+
+  swEl.start.addEventListener("click", function () {
+    if (sw.running) return;
+    sw.running = true;
+    sw.startedAt = Date.now();
+    startSwTicking();
+    renderStopwatch();
+  });
+
+  swEl.pause.addEventListener("click", function () {
+    if (!sw.running) return;
+    sw.accumulatedMs += Date.now() - sw.startedAt;
+    sw.running = false;
+    sw.startedAt = null;
+    stopSwTicking();
+    renderStopwatch();
+  });
+
+  swEl.lap.addEventListener("click", function () {
+    if (!sw.running) return;
+    var total = swElapsed();
+    var previousTotal = sw.laps.length > 0 ? sw.laps[sw.laps.length - 1].total : 0;
+    sw.laps.push({ total: total, split: total - previousTotal });
+    renderLaps();
+    renderStopwatch();
+  });
+
+  swEl.reset.addEventListener("click", function () {
+    if (sw.running) return;
+    sw.accumulatedMs = 0;
+    sw.laps = [];
+    stopSwTicking();
+    renderLaps();
+    renderStopwatch();
+  });
+
+  renderStopwatch();
+  renderLaps();
+})();
+</script>
+</body>
+</html>
