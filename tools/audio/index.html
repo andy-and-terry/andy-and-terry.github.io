@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Audio Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🎧 Audio Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Audio Toolkit</h1>
+  <p class="subtitle">
+    6 browser-based audio tools. Everything runs locally in your tab via ffmpeg.wasm — no uploads,
+    no accounts, no server. Pick a tool to get started.
+  </p>
+
+  <div class="tool-grid">
+    <a class="tool-card" href="trim-convert.html">
+      <span class="icon">✂️</span>
+      <div class="name">Trim / Convert</div>
+      <div class="desc">Cut a clip down and export as MP3, WAV, OGG, AAC, or FLAC.</div>
+    </a>
+    <a class="tool-card" href="volume-normalize.html">
+      <span class="icon">📶</span>
+      <div class="name">Normalize</div>
+      <div class="desc">Even out loudness to a target LUFS level.</div>
+    </a>
+    <a class="tool-card" href="silence-remove.html">
+      <span class="icon">🔇</span>
+      <div class="name">Silence Remove</div>
+      <div class="desc">Auto-trim leading, trailing, and internal silence.</div>
+    </a>
+    <a class="tool-card" href="merge.html">
+      <span class="icon">🔗</span>
+      <div class="name">Merge</div>
+      <div class="desc">Join multiple clips into one, in order.</div>
+    </a>
+    <a class="tool-card" href="pitch-speed.html">
+      <span class="icon">⏩</span>
+      <div class="name">Pitch / Speed</div>
+      <div class="desc">Change playback speed and pitch independently.</div>
+    </a>
+    <a class="tool-card" href="waveform-to-video.html">
+      <span class="icon">🌊</span>
+      <div class="name">Waveform Video</div>
+      <div class="desc">Render a waveform visualization as an MP4.</div>
+    </a>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+</body>
+</html>
