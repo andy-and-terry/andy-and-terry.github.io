@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trim / Convert — Audio Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🎧 Audio Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Trim / Convert</h1>
+  <p class="subtitle">Cut a clip down to a start and end point and export as MP3, WAV, OGG, AAC, or FLAC. Runs entirely in your browser — nothing uploads anywhere.</p>
+
+  <div class="card">
+    <h2>1. Choose an audio file</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose an audio file">
+      <div><strong>Click to choose</strong> or drag an audio file here</div>
+      <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.oga,.m4a,.aac,.flac,.wma,.opus,.aiff,.webm" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <audio id="preview" class="preview" controls style="display:none"></audio>
+    <div class="waveform-wrap" id="waveform-wrap" style="display:none">
+      <canvas class="waveform" id="waveform" style="display:none"></canvas>
+      <div class="waveform-empty" id="waveform-empty" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Set trim range</h2>
+    <div class="field">
+      <label>Start <span class="value-pill" id="start-pill">0:00.0</span></label>
+      <input type="range" id="start-range" min="0" max="0" step="0.1" value="0" />
+    </div>
+    <div class="field">
+      <label>End <span class="value-pill" id="end-pill">0:00.0</span></label>
+      <input type="range" id="end-range" min="0" max="0" step="0.1" value="0" />
+    </div>
+    <div class="btn-row" style="margin-bottom:16px">
+      <button class="btn btn-secondary" id="set-start-btn" type="button">Set start to current time</button>
+      <button class="btn btn-secondary" id="set-end-btn" type="button">Set end to current time</button>
+    </div>
+    <div class="field">
+      <label>Selected duration</label>
+      <input type="text" id="duration-out" disabled />
+    </div>
+
+    <h2>3. Output format</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Format</label>
+        <select id="format-select">
+          <option value="mp3" selected>MP3</option>
+          <option value="wav">WAV (uncompressed)</option>
+          <option value="ogg">OGG (Vorbis)</option>
+          <option value="aac">AAC</option>
+          <option value="flac">FLAC (lossless)</option>
+        </select>
+      </div>
+      <div class="field" id="bitrate-field">
+        <label>Bitrate</label>
+        <select id="bitrate-select">
+          <option value="128k">128 kbps</option>
+          <option value="192k" selected>192 kbps</option>
+          <option value="320k">320 kbps</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Trim &amp; convert</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+    <details class="log" id="log-details">
+      <summary>ffmpeg log</summary>
+      <pre id="log-output"></pre>
+    </details>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>4. Result</h2>
+    <audio id="output-audio" class="preview" controls></audio>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="lib/ffmpeg.js"></script>
+<script src="lib/ffmpeg-util.js"></script>
+<script src="nav.js"></script>
+<script src="js/waveform.js"></script>
+<script src="js/trim-convert.js"></script>
+</body>
+</html>
