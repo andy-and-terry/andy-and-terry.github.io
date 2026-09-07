@@ -168,7 +168,8 @@ h1 {
 /* Preview */
 
 video,
-img.preview {
+img.preview,
+canvas.preview {
   max-width: 100%;
   border-radius: 8px;
   background: #000;

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EXIF Viewer — Image Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🖼️ Image Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>EXIF Viewer</h1>
+  <p class="subtitle">View a photo's embedded metadata, or download a clean copy with it stripped.</p>
+
+  <div class="card">
+    <h2>1. Choose an image</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose an image file">
+      <div><strong>Click to choose</strong> or drag a JPEG/TIFF/HEIC image here</div>
+      <input type="file" id="file-input" accept="image/*,.heic,.heif" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <img class="preview" id="preview" style="display:none" alt="Preview" />
+    <div id="load-error"></div>
+    <div class="status-line" id="load-status"></div>
+  </div>
+
+  <div class="card" id="exif-card" style="display:none">
+    <h2>2. Metadata</h2>
+    <div id="exif-empty" class="hint" style="display:none">No EXIF metadata found in this file.</div>
+    <div id="gps-link" style="display:none" class="hint"></div>
+    <table id="exif-table" style="width:100%; border-collapse: collapse; font-size:13px;"></table>
+  </div>
+
+  <div class="card" id="strip-card" style="display:none">
+    <h2>3. Remove metadata</h2>
+    <p class="hint">Re-saves the image without any EXIF/GPS metadata.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="strip-btn" type="button">Strip &amp; download</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>4. Result</h2>
+    <img class="preview" id="after-preview" alt="Stripped preview" />
+    <div class="file-info"><span id="after-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="lib/exifr.min.js"></script>
+<script src="js/common.js"></script>
+<script src="nav.js"></script>
+<script src="js/exif-viewer.js"></script>
+</body>
+</html>

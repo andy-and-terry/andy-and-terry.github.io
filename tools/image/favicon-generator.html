@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Favicon Generator — Image Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🖼️ Image Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Favicon Generator</h1>
+  <p class="subtitle">Turn a square-ish image into a full set of favicon PNGs, sized and ready to use.</p>
+
+  <div class="card">
+    <h2>1. Choose an image</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose an image file">
+      <div><strong>Click to choose</strong> or drag an image here</div>
+      <input type="file" id="file-input" accept="image/*" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <img class="preview" id="preview" style="display:none; max-width:200px" alt="Preview" />
+    <div id="load-error"></div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Generate</h2>
+    <p class="hint">The image is center-cropped to a square, then resized to each icon size.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Generate favicons</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <div class="thumb-grid" id="thumb-grid"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="html-snippet-btn" type="button">Copy HTML snippet</button>
+    </div>
+    <details class="log" id="snippet-details" style="display:none">
+      <summary>HTML snippet</summary>
+      <pre id="snippet-output"></pre>
+    </details>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="js/common.js"></script>
+<script src="nav.js"></script>
+<script src="js/favicon-generator.js"></script>
+</body>
+</html>

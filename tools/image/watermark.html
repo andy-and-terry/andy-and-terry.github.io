@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Watermark Image — Image Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🖼️ Image Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Watermark Image</h1>
+  <p class="subtitle">Overlay text or a logo image, anywhere on the frame.</p>
+
+  <div class="card">
+    <h2>1. Choose an image</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose an image file">
+      <div><strong>Click to choose</strong> or drag an image here</div>
+      <input type="file" id="file-input" accept="image/*" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <div id="load-error"></div>
+    <canvas id="preview-canvas" class="preview" style="display:none"></canvas>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Watermark</h2>
+    <div class="field">
+      <label>Type</label>
+      <select id="type-select">
+        <option value="text">Text</option>
+        <option value="image">Logo image</option>
+      </select>
+    </div>
+    <div class="field" id="text-field">
+      <label>Watermark text</label>
+      <input type="text" id="text-input" value="© Sample" />
+    </div>
+    <div class="field" id="logo-field" style="display:none">
+      <label>Logo file</label>
+      <input type="file" id="logo-input" accept="image/*" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Position</label>
+        <select id="position-select">
+          <option value="top-left">Top left</option>
+          <option value="top-right">Top right</option>
+          <option value="bottom-left">Bottom left</option>
+          <option value="bottom-right" selected>Bottom right</option>
+          <option value="center">Center</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Opacity — <span class="value-pill" id="opacity-value">80</span></label>
+        <input type="range" id="opacity-input" min="5" max="100" value="80" />
+      </div>
+    </div>
+    <div class="field-row" id="text-only-fields">
+      <div class="field">
+        <label>Font size (px) — <span class="value-pill" id="fontsize-value">36</span></label>
+        <input type="range" id="fontsize-input" min="10" max="200" value="36" />
+      </div>
+      <div class="field">
+        <label>Color</label>
+        <input type="color" id="color-input" value="#ffffff" />
+      </div>
+    </div>
+    <div class="field" id="scale-field" style="display:none">
+      <label>Logo scale (% of width) — <span class="value-pill" id="scale-value">20</span></label>
+      <input type="range" id="scale-input" min="5" max="80" value="20" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Apply watermark</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <img class="preview" id="after-preview" alt="Watermarked preview" />
+    <div class="file-info"><span id="after-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="js/common.js"></script>
+<script src="nav.js"></script>
+<script src="js/watermark.js"></script>
+</body>
+</html>
