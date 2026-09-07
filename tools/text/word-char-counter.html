@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Word &amp; Character Counter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Text Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+  <a href="../index.html" style="color:var(--text-faint);font-size:13px;white-space:nowrap">← All Toolkits</a>
+</header>
+
+<main>
+  <h1>Word &amp; Character Counter</h1>
+  <p class="subtitle">Live counts and an estimated reading time as you type. Runs entirely in your browser.</p>
+
+  <div class="card">
+    <textarea id="input" rows="14" spellcheck="true" placeholder="Start typing or paste text here..."></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Stats</h2>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="num" id="stat-words">0</div><div class="label">Words</div></div>
+      <div class="stat-box"><div class="num" id="stat-chars">0</div><div class="label">Characters</div></div>
+      <div class="stat-box"><div class="num" id="stat-chars-nospace">0</div><div class="label">Chars (no spaces)</div></div>
+      <div class="stat-box"><div class="num" id="stat-sentences">0</div><div class="label">Sentences</div></div>
+      <div class="stat-box"><div class="num" id="stat-paragraphs">0</div><div class="label">Paragraphs</div></div>
+      <div class="stat-box"><div class="num" id="stat-reading">0s</div><div class="label">Reading time</div></div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs entirely in your browser. Nothing you type is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/word-char-counter.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Base64 / URL Encoder</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Text Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+  <a href="../index.html" style="color:var(--text-faint);font-size:13px;white-space:nowrap">← All Toolkits</a>
+</header>
+
+<main>
+  <h1>Base64 / URL Encoder</h1>
+  <p class="subtitle">Encode and decode Base64 and URL (percent) encoding, live, with auto-detected decode mode. Runs entirely in your browser.</p>
+
+  <div class="card">
+    <h2>Input</h2>
+    <textarea id="input" rows="6" spellcheck="false" placeholder="Type or paste text here"></textarea>
+    <div class="hint" id="detect-hint" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <div class="field-label-row">
+      <h2 style="margin:0">Base64 &mdash; encode</h2>
+      <button class="copy-btn" id="copy-b64-encode" type="button">Copy</button>
+    </div>
+    <pre class="output-box" id="b64-encode-output"></pre>
+  </div>
+
+  <div class="card">
+    <div class="field-label-row">
+      <h2 style="margin:0">Base64 &mdash; decode</h2>
+      <button class="copy-btn" id="copy-b64-decode" type="button">Copy</button>
+    </div>
+    <pre class="output-box" id="b64-decode-output"></pre>
+    <div id="b64-decode-error" class="banner banner-error" hidden></div>
+  </div>
+
+  <div class="card">
+    <div class="field-label-row">
+      <h2 style="margin:0">URL &mdash; encode</h2>
+      <button class="copy-btn" id="copy-url-encode" type="button">Copy</button>
+    </div>
+    <pre class="output-box" id="url-encode-output"></pre>
+  </div>
+
+  <div class="card">
+    <div class="field-label-row">
+      <h2 style="margin:0">URL &mdash; decode</h2>
+      <button class="copy-btn" id="copy-url-decode" type="button">Copy</button>
+    </div>
+    <pre class="output-box" id="url-decode-output"></pre>
+    <div id="url-decode-error" class="banner banner-error" hidden></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs entirely in your browser. Nothing you type is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/base64-url-encoder.js"></script>
+</body>
+</html>
