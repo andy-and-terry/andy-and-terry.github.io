@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Barcode Generator</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Misc Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Barcode Generator</h1>
+  <p class="subtitle">
+    Generate common 1D barcodes and download them as a PNG. Rendered locally in your browser.
+  </p>
+
+  <div class="card">
+    <h2>Content</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="format-select">Format</label>
+        <select id="format-select">
+          <option value="CODE128" selected>Code 128</option>
+          <option value="EAN13">EAN-13</option>
+          <option value="EAN8">EAN-8</option>
+          <option value="UPC">UPC-A</option>
+          <option value="CODE39">Code 39</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="value-input">Data</label>
+        <input type="text" id="value-input" value="123456789012" />
+        <div class="hint" id="format-hint"></div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="width-range">Bar width <span class="value-pill" id="width-value">2px</span></label>
+        <input type="range" id="width-range" min="1" max="6" step="1" value="2" />
+      </div>
+      <div class="field">
+        <label for="height-range">Height <span class="value-pill" id="height-value">100px</span></label>
+        <input type="range" id="height-range" min="40" max="240" step="10" value="100" />
+      </div>
+    </div>
+
+    <label class="check">
+      <input type="checkbox" id="show-text" checked />
+      Show human-readable text
+    </label>
+  </div>
+
+  <div class="card">
+    <h2>Preview</h2>
+    <div id="banner-slot"></div>
+    <canvas id="barcode-canvas" class="preview" style="margin-left:auto;margin-right:auto;"></canvas>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="download-btn">⬇ Download PNG</button>
+      <button class="btn btn-secondary" id="copy-btn">📋 Copy Image</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+<script src="lib/JsBarcode.all.min.js"></script>
+<script>
+(function () {
+  var formatSelect = document.getElementById("format-select");
+  var valueInput = document.getElementById("value-input");
+  var formatHint = document.getElementById("format-hint");
+  var widthRange = document.getElementById("width-range");
+  var widthValue = document.getElementById("width-value");
+  var heightRange = document.getElementById("height-range");
+  var heightValue = document.getElementById("height-value");
+  var showText = document.getElementById("show-text");
+  var canvas = document.getElementById("barcode-canvas");
+  var bannerSlot = document.getElementById("banner-slot");
+  var downloadBtn = document.getElementById("download-btn");
+  var copyBtn = document.getElementById("copy-btn");
+
+  var hints = {
+    CODE128: "Any text or digits.",
+    EAN13: "12 or 13 digits (checksum is added/verified automatically).",
+    EAN8: "7 or 8 digits (checksum is added/verified automatically).",
+    UPC: "11 or 12 digits (checksum is added/verified automatically).",
+    CODE39: "Uppercase letters, digits, and - . $ / + % space.",
+  };
+
+  var defaults = {
+    CODE128: "Hello World 123",
+    EAN13: "123456789012",
+    EAN8: "1234567",
+    UPC: "12345678901",
+    CODE39: "CODE39",
+  };
+
+  var hasContent = false;
+
+  function showBanner(message, kind) {
+    if (!message) {
+      bannerSlot.innerHTML = "";
+      return;
+    }
+    var div = document.createElement("div");
+    div.className = "banner banner-" + kind;
+    div.textContent = message;
+    bannerSlot.innerHTML = "";
+    bannerSlot.appendChild(div);
+  }
+
+  function render() {
+    var format = formatSelect.value;
+    formatHint.textContent = hints[format] || "";
+
+    var value = valueInput.value;
+    if (!value) {
+      hasContent = false;
+      canvas.width = canvas.height = 0;
+      downloadBtn.disabled = true;
+      copyBtn.disabled = true;
+      showBanner("Enter a value to encode.", "warning");
+      return;
+    }
+
+    var ok = true;
+    try {
+      JsBarcode(canvas, value, {
+        format: format,
+        width: parseInt(widthRange.value, 10),
+        height: parseInt(heightRange.value, 10),
+        displayValue: showText.checked,
+        background: "#ffffff",
+        lineColor: "#000000",
+        margin: 12,
+        valid: function (isValid) {
+          ok = isValid;
+        },
+      });
+    } catch (e) {
+      ok = false;
+    }
+
+    if (!ok) {
+      hasContent = false;
+      canvas.width = canvas.height = 0;
+      downloadBtn.disabled = true;
+      copyBtn.disabled = true;
+      showBanner("This value isn't valid for " + format + ". " + (hints[format] || ""), "error");
+      return;
+    }
+
+    hasContent = true;
+    downloadBtn.disabled = false;
+    copyBtn.disabled = false;
+    showBanner("", "");
+  }
+
+  formatSelect.addEventListener("change", function () {
+    if (!valueInput.dataset.touched) {
+      valueInput.value = defaults[formatSelect.value] || "";
+    }
+    render();
+  });
+  valueInput.addEventListener("input", function () {
+    valueInput.dataset.touched = "1";
+    render();
+  });
+  showText.addEventListener("change", render);
+  widthRange.addEventListener("input", function () {
+    widthValue.textContent = widthRange.value + "px";
+    render();
+  });
+  heightRange.addEventListener("input", function () {
+    heightValue.textContent = heightRange.value + "px";
+    render();
+  });
+
+  downloadBtn.addEventListener("click", function () {
+    if (!hasContent) return;
+    canvas.toBlob(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "barcode.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }, "image/png");
+  });
+
+  copyBtn.addEventListener("click", function () {
+    if (!hasContent) return;
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      showBanner("Copying images isn't supported in this browser. Use Download instead.", "warning");
+      return;
+    }
+    canvas.toBlob(function (blob) {
+      navigator.clipboard
+        .write([new ClipboardItem({ "image/png": blob })])
+        .then(function () {
+          showBanner("Copied to clipboard.", "success");
+        })
+        .catch(function () {
+          showBanner("Copying failed. Use Download instead.", "warning");
+        });
+    }, "image/png");
+  });
+
+  downloadBtn.disabled = true;
+  copyBtn.disabled = true;
+  render();
+})();
+</script>
+</body>
+</html>

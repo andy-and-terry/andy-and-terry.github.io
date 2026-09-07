@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timestamp Converter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Misc Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Timestamp Converter</h1>
+  <p class="subtitle">Convert between Unix timestamps and human-readable dates, timezone aware.</p>
+
+  <div class="card">
+    <h2>Current Time</h2>
+    <div class="result-box">
+      <div class="result-value" id="now-seconds"></div>
+      <button class="btn-small copy-btn" id="copy-now-s">Copy</button>
+    </div>
+    <div class="hint">Unix seconds</div>
+    <div class="result-box" style="margin-top:10px">
+      <div class="result-value" id="now-millis"></div>
+      <button class="btn-small copy-btn" id="copy-now-ms">Copy</button>
+    </div>
+    <div class="hint">Unix milliseconds</div>
+  </div>
+
+  <div class="card">
+    <h2>Timestamp → Date</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="ts-input">Unix timestamp</label>
+        <input type="text" inputmode="numeric" id="ts-input" placeholder="e.g. 1700000000" />
+      </div>
+      <div class="field">
+        <label for="ts-unit">Unit</label>
+        <select id="ts-unit">
+          <option value="auto" selected>Auto-detect</option>
+          <option value="s">Seconds</option>
+          <option value="ms">Milliseconds</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="tz-select">Timezone</label>
+      <select id="tz-select"></select>
+    </div>
+    <div id="ts-banner"></div>
+    <div class="field" id="ts-result-wrap" style="display:none">
+      <label>Result</label>
+      <div class="result-box">
+        <div class="result-value" id="ts-result"></div>
+        <button class="btn-small copy-btn" id="copy-ts-result">Copy</button>
+      </div>
+      <div class="hint" id="ts-relative"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Date → Timestamp</h2>
+    <div class="field">
+      <label for="date-input">Local date &amp; time</label>
+      <input type="datetime-local" id="date-input" step="1" />
+    </div>
+    <div id="date-banner"></div>
+    <div class="field" id="date-result-wrap" style="display:none">
+      <label>Result</label>
+      <div class="field-row">
+        <div class="result-box" style="flex:1">
+          <div class="result-value" id="date-result-s"></div>
+          <button class="btn-small copy-btn" id="copy-date-s">Copy</button>
+        </div>
+      </div>
+      <div class="hint">Seconds</div>
+      <div class="field-row" style="margin-top:8px">
+        <div class="result-box" style="flex:1">
+          <div class="result-value" id="date-result-ms"></div>
+          <button class="btn-small copy-btn" id="copy-date-ms">Copy</button>
+        </div>
+      </div>
+      <div class="hint">Milliseconds</div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var TIMEZONES = [
+    "UTC",
+    "Local",
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Chicago",
+    "America/New_York",
+    "America/Sao_Paulo",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Europe/Moscow",
+    "Africa/Cairo",
+    "Asia/Dubai",
+    "Asia/Kolkata",
+    "Asia/Shanghai",
+    "Asia/Tokyo",
+    "Australia/Sydney",
+    "Pacific/Auckland",
+  ];
+
+  var nowSeconds = document.getElementById("now-seconds");
+  var nowMillis = document.getElementById("now-millis");
+  var tsInput = document.getElementById("ts-input");
+  var tsUnit = document.getElementById("ts-unit");
+  var tzSelect = document.getElementById("tz-select");
+  var tsBanner = document.getElementById("ts-banner");
+  var tsResultWrap = document.getElementById("ts-result-wrap");
+  var tsResult = document.getElementById("ts-result");
+  var tsRelative = document.getElementById("ts-relative");
+  var dateInput = document.getElementById("date-input");
+  var dateBanner = document.getElementById("date-banner");
+  var dateResultWrap = document.getElementById("date-result-wrap");
+  var dateResultS = document.getElementById("date-result-s");
+  var dateResultMs = document.getElementById("date-result-ms");
+
+  TIMEZONES.forEach(function (tz) {
+    var opt = document.createElement("option");
+    opt.value = tz;
+    opt.textContent = tz === "Local" ? "Local (" + Intl.DateTimeFormat().resolvedOptions().timeZone + ")" : tz;
+    tzSelect.appendChild(opt);
+  });
+  tzSelect.value = "Local";
+
+  function showBanner(el, message, kind) {
+    if (!message) {
+      el.innerHTML = "";
+      return;
+    }
+    el.innerHTML = '<div class="banner banner-' + kind + '">' + message + "</div>";
+  }
+
+  function tick() {
+    var now = Date.now();
+    nowSeconds.textContent = Math.floor(now / 1000);
+    nowMillis.textContent = now;
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  [["copy-now-s", "now-seconds"], ["copy-now-ms", "now-millis"]].forEach(function (pair) {
+    document.getElementById(pair[0]).addEventListener("click", function () {
+      var text = document.getElementById(pair[1]).textContent;
+      if (navigator.clipboard) navigator.clipboard.writeText(text);
+    });
+  });
+
+  function formatInTimezone(date, tz) {
+    var effectiveTz = tz === "Local" ? undefined : tz;
+    var opts = {
+      timeZone: effectiveTz,
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      timeZoneName: "short",
+    };
+    return new Intl.DateTimeFormat("en-US", opts).format(date);
+  }
+
+  function relativeTime(date) {
+    var diffMs = date.getTime() - Date.now();
+    var diffSec = Math.round(diffMs / 1000);
+    var abs = Math.abs(diffSec);
+    var units = [
+      ["year", 31536000],
+      ["month", 2592000],
+      ["day", 86400],
+      ["hour", 3600],
+      ["minute", 60],
+      ["second", 1],
+    ];
+    for (var i = 0; i < units.length; i++) {
+      var unit = units[i][0];
+      var secs = units[i][1];
+      if (abs >= secs || unit === "second") {
+        var value = Math.round(diffSec / secs);
+        var rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+        return rtf.format(value, unit);
+      }
+    }
+  }
+
+  function renderTimestamp() {
+    var raw = tsInput.value.trim();
+    if (!raw) {
+      showBanner(tsBanner, "", "");
+      tsResultWrap.style.display = "none";
+      return;
+    }
+
+    if (!/^-?\d+$/.test(raw)) {
+      showBanner(tsBanner, "Enter a whole number (seconds or milliseconds since 1970-01-01).", "error");
+      tsResultWrap.style.display = "none";
+      return;
+    }
+
+    var num = parseInt(raw, 10);
+    var unit = tsUnit.value;
+    if (unit === "auto") {
+      unit = Math.abs(num) >= 1e11 ? "ms" : "s";
+    }
+    var ms = unit === "ms" ? num : num * 1000;
+
+    var date = new Date(ms);
+    if (isNaN(date.getTime())) {
+      showBanner(tsBanner, "That timestamp is out of range.", "error");
+      tsResultWrap.style.display = "none";
+      return;
+    }
+
+    showBanner(tsBanner, "", "");
+    tsResultWrap.style.display = "";
+    tsResult.textContent = formatInTimezone(date, tzSelect.value);
+    tsRelative.textContent = relativeTime(date);
+  }
+
+  tsInput.addEventListener("input", renderTimestamp);
+  tsUnit.addEventListener("change", renderTimestamp);
+  tzSelect.addEventListener("change", renderTimestamp);
+  document.getElementById("copy-ts-result").addEventListener("click", function () {
+    if (navigator.clipboard) navigator.clipboard.writeText(tsResult.textContent);
+  });
+
+  function renderDate() {
+    var raw = dateInput.value;
+    if (!raw) {
+      showBanner(dateBanner, "", "");
+      dateResultWrap.style.display = "none";
+      return;
+    }
+    var date = new Date(raw);
+    if (isNaN(date.getTime())) {
+      showBanner(dateBanner, "Enter a valid date and time.", "error");
+      dateResultWrap.style.display = "none";
+      return;
+    }
+    showBanner(dateBanner, "", "");
+    dateResultWrap.style.display = "";
+    dateResultS.textContent = Math.floor(date.getTime() / 1000);
+    dateResultMs.textContent = date.getTime();
+  }
+
+  dateInput.addEventListener("input", renderDate);
+  document.getElementById("copy-date-s").addEventListener("click", function () {
+    if (navigator.clipboard) navigator.clipboard.writeText(dateResultS.textContent);
+  });
+  document.getElementById("copy-date-ms").addEventListener("click", function () {
+    if (navigator.clipboard) navigator.clipboard.writeText(dateResultMs.textContent);
+  });
+
+  // Seed with "now" as a starting example
+  var seedDate = new Date();
+  seedDate.setMilliseconds(0);
+  var pad = function (n) {
+    return String(n).padStart(2, "0");
+  };
+  dateInput.value =
+    seedDate.getFullYear() +
+    "-" +
+    pad(seedDate.getMonth() + 1) +
+    "-" +
+    pad(seedDate.getDate()) +
+    "T" +
+    pad(seedDate.getHours()) +
+    ":" +
+    pad(seedDate.getMinutes()) +
+    ":" +
+    pad(seedDate.getSeconds());
+  tsInput.value = Math.floor(seedDate.getTime() / 1000);
+
+  renderTimestamp();
+  renderDate();
+})();
+</script>
+</body>
+</html>

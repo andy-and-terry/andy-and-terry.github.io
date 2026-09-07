@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QR Code Generator</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Misc Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>QR Code Generator</h1>
+  <p class="subtitle">
+    Turn any text or URL into a QR code. Generated locally in your browser — nothing is uploaded.
+  </p>
+
+  <div class="card">
+    <h2>Content</h2>
+    <div class="field">
+      <label for="text-input">Text or URL</label>
+      <textarea id="text-input" rows="4" placeholder="https://example.com">https://example.com</textarea>
+      <div class="hint" id="length-hint">10 characters</div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="size-range">Size <span class="value-pill" id="size-value">320px</span></label>
+        <input type="range" id="size-range" min="128" max="1024" step="16" value="320" />
+      </div>
+      <div class="field">
+        <label for="ec-level">Error correction</label>
+        <select id="ec-level">
+          <option value="L">L — Low (~7%)</option>
+          <option value="M" selected>M — Medium (~15%)</option>
+          <option value="Q">Q — Quartile (~25%)</option>
+          <option value="H">H — High (~30%)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="fg-color">Foreground</label>
+        <input type="color" id="fg-color" value="#000000" />
+      </div>
+      <div class="field">
+        <label for="bg-color">Background</label>
+        <input type="color" id="bg-color" value="#ffffff" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Preview</h2>
+    <div id="banner-slot"></div>
+    <canvas id="qr-canvas" class="preview" style="margin-left:auto;margin-right:auto;"></canvas>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="download-btn">⬇ Download PNG</button>
+      <button class="btn btn-secondary" id="copy-btn">📋 Copy Image</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+<script src="lib/qrcode.js"></script>
+<script>
+(function () {
+  var textInput = document.getElementById("text-input");
+  var sizeRange = document.getElementById("size-range");
+  var sizeValue = document.getElementById("size-value");
+  var ecLevel = document.getElementById("ec-level");
+  var fgColor = document.getElementById("fg-color");
+  var bgColor = document.getElementById("bg-color");
+  var canvas = document.getElementById("qr-canvas");
+  var ctx = canvas.getContext("2d");
+  var bannerSlot = document.getElementById("banner-slot");
+  var lengthHint = document.getElementById("length-hint");
+  var downloadBtn = document.getElementById("download-btn");
+  var copyBtn = document.getElementById("copy-btn");
+
+  var debounceTimer = null;
+  var hasContent = false;
+
+  function showBanner(message, kind) {
+    if (!message) {
+      bannerSlot.innerHTML = "";
+      return;
+    }
+    var div = document.createElement("div");
+    div.className = "banner banner-" + kind;
+    div.textContent = message;
+    bannerSlot.innerHTML = "";
+    bannerSlot.appendChild(div);
+  }
+
+  function buildQr(text, level) {
+    var lastError = null;
+    for (var typeNumber = 1; typeNumber <= 40; typeNumber++) {
+      try {
+        var qr = qrcode(typeNumber, level);
+        qr.addData(text);
+        qr.make();
+        return qr;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw lastError || new Error("Unable to encode text");
+  }
+
+  function render() {
+    var text = textInput.value;
+    lengthHint.textContent = text.length + " character" + (text.length === 1 ? "" : "s");
+
+    if (!text) {
+      hasContent = false;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = canvas.height = 0;
+      showBanner("Enter some text or a URL to generate a QR code.", "warning");
+      downloadBtn.disabled = true;
+      copyBtn.disabled = true;
+      return;
+    }
+
+    var size = parseInt(sizeRange.value, 10);
+    var level = ecLevel.value;
+
+    try {
+      var qr = buildQr(text, level);
+      var moduleCount = qr.getModuleCount();
+      var margin = 4;
+      var totalModules = moduleCount + margin * 2;
+      var cell = Math.max(1, Math.floor(size / totalModules));
+      var pixelSize = cell * totalModules;
+
+      canvas.width = pixelSize;
+      canvas.height = pixelSize;
+
+      ctx.fillStyle = bgColor.value;
+      ctx.fillRect(0, 0, pixelSize, pixelSize);
+
+      ctx.fillStyle = fgColor.value;
+      for (var row = 0; row < moduleCount; row++) {
+        for (var col = 0; col < moduleCount; col++) {
+          if (qr.isDark(row, col)) {
+            ctx.fillRect((col + margin) * cell, (row + margin) * cell, cell, cell);
+          }
+        }
+      }
+
+      hasContent = true;
+      downloadBtn.disabled = false;
+      copyBtn.disabled = false;
+      showBanner("", "");
+    } catch (err) {
+      hasContent = false;
+      canvas.width = canvas.height = 0;
+      downloadBtn.disabled = true;
+      copyBtn.disabled = true;
+      showBanner("Text is too long to encode, even at the lowest error correction level.", "error");
+    }
+  }
+
+  function scheduleRender() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(render, 120);
+  }
+
+  textInput.addEventListener("input", scheduleRender);
+  ecLevel.addEventListener("change", render);
+  fgColor.addEventListener("input", render);
+  bgColor.addEventListener("input", render);
+  sizeRange.addEventListener("input", function () {
+    sizeValue.textContent = sizeRange.value + "px";
+    scheduleRender();
+  });
+
+  downloadBtn.addEventListener("click", function () {
+    if (!hasContent) return;
+    canvas.toBlob(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "qrcode.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }, "image/png");
+  });
+
+  copyBtn.addEventListener("click", function () {
+    if (!hasContent) return;
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      showBanner("Copying images isn't supported in this browser. Use Download instead.", "warning");
+      return;
+    }
+    canvas.toBlob(function (blob) {
+      navigator.clipboard
+        .write([new ClipboardItem({ "image/png": blob })])
+        .then(function () {
+          showBanner("Copied to clipboard.", "success");
+        })
+        .catch(function () {
+          showBanner("Copying failed. Use Download instead.", "warning");
+        });
+    }, "image/png");
+  });
+
+  downloadBtn.disabled = true;
+  copyBtn.disabled = true;
+  render();
+})();
+</script>
+</body>
+</html>
