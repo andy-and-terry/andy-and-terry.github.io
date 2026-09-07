@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Compress PDF — PDF Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📄 PDF Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Compress PDF</h1>
+  <p class="subtitle">Shrinks a PDF by rendering each page to a downsampled, recompressed JPEG and rebuilding the file. Best for image-heavy or scanned PDFs; text becomes part of the image, so it's no longer selectable in the output.</p>
+
+  <div class="card">
+    <h2>1. Choose a PDF</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose a PDF file">
+      <div><strong>Click to choose</strong> or drag a PDF file here</div>
+      <input type="file" id="file-input" accept="application/pdf" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span><span id="file-size"></span>
+    </div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Settings</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Resolution <span class="value-pill" id="dpi-value">120 DPI</span></label>
+        <input type="range" id="dpi-input" min="72" max="200" step="4" value="120" />
+        <div class="hint">Lower resolution = smaller file, blurrier output.</div>
+      </div>
+      <div class="field">
+        <label>JPEG quality <span class="value-pill" id="quality-value">60%</span></label>
+        <input type="range" id="quality-input" min="20" max="95" step="5" value="60" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" value="compressed.pdf" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Compress PDF</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <div class="file-info">
+      <span id="output-size"></span>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via pdf-lib and pdf.js. No files leave your device.</footer>
+
+<script src="lib/pdf-lib.min.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/pdf-common.js"></script>
+<script src="js/compress.js"></script>
+</body>
+</html>
