@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Unit Converter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Misc Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Unit Converter</h1>
+  <p class="subtitle">Live conversion for length, weight, temperature, and data size.</p>
+
+  <div class="tabs" id="category-tabs">
+    <button class="tab active" data-category="length">Length</button>
+    <button class="tab" data-category="weight">Weight</button>
+    <button class="tab" data-category="temperature">Temperature</button>
+    <button class="tab" data-category="data">Data Size</button>
+  </div>
+
+  <div class="card">
+    <div class="field-row">
+      <div class="field">
+        <label for="value-input">Value</label>
+        <input type="text" inputmode="decimal" id="value-input" value="1" />
+      </div>
+      <div class="field">
+        <label for="unit-select">Unit</label>
+        <select id="unit-select"></select>
+      </div>
+    </div>
+    <div id="banner-slot"></div>
+  </div>
+
+  <div class="card">
+    <h2>Converted</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Unit</th>
+          <th style="text-align:right">Value</th>
+        </tr>
+      </thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var LENGTH_UNITS = [
+    ["mm", "Millimeters", 0.001],
+    ["cm", "Centimeters", 0.01],
+    ["m", "Meters", 1],
+    ["km", "Kilometers", 1000],
+    ["in", "Inches", 0.0254],
+    ["ft", "Feet", 0.3048],
+    ["yd", "Yards", 0.9144],
+    ["mi", "Miles", 1609.344],
+  ];
+
+  var WEIGHT_UNITS = [
+    ["mg", "Milligrams", 0.001],
+    ["g", "Grams", 1],
+    ["kg", "Kilograms", 1000],
+    ["t", "Tonnes", 1000000],
+    ["oz", "Ounces", 28.349523125],
+    ["lb", "Pounds", 453.59237],
+    ["st", "Stone", 6350.29318],
+  ];
+
+  var DATA_UNITS = [
+    ["bit", "Bits", 0.125],
+    ["byte", "Bytes", 1],
+    ["kB", "Kilobytes (10^3)", 1e3],
+    ["KiB", "Kibibytes (2^10)", 1024],
+    ["MB", "Megabytes (10^6)", 1e6],
+    ["MiB", "Mebibytes (2^20)", 1024 * 1024],
+    ["GB", "Gigabytes (10^9)", 1e9],
+    ["GiB", "Gibibytes (2^30)", 1024 * 1024 * 1024],
+    ["TB", "Terabytes (10^12)", 1e12],
+    ["TiB", "Tebibytes (2^40)", 1024 * 1024 * 1024 * 1024],
+  ];
+
+  var TEMP_UNITS = [
+    ["c", "Celsius"],
+    ["f", "Fahrenheit"],
+    ["k", "Kelvin"],
+  ];
+
+  function tempToCelsius(value, unit) {
+    if (unit === "c") return value;
+    if (unit === "f") return ((value - 32) * 5) / 9;
+    return value - 273.15;
+  }
+
+  function celsiusTo(value, unit) {
+    if (unit === "c") return value;
+    if (unit === "f") return (value * 9) / 5 + 32;
+    return value + 273.15;
+  }
+
+  var categories = {
+    length: { kind: "linear", units: LENGTH_UNITS },
+    weight: { kind: "linear", units: WEIGHT_UNITS },
+    data: { kind: "linear", units: DATA_UNITS },
+    temperature: { kind: "temperature", units: TEMP_UNITS },
+  };
+
+  var tabs = document.querySelectorAll(".tab");
+  var unitSelect = document.getElementById("unit-select");
+  var valueInput = document.getElementById("value-input");
+  var resultsBody = document.getElementById("results-body");
+  var bannerSlot = document.getElementById("banner-slot");
+
+  var currentCategory = "length";
+  var defaultUnit = { length: "m", weight: "kg", data: "MB", temperature: "c" };
+
+  function showBanner(message, kind) {
+    if (!message) {
+      bannerSlot.innerHTML = "";
+      return;
+    }
+    bannerSlot.innerHTML = '<div class="banner banner-' + kind + '">' + message + "</div>";
+  }
+
+  function populateUnits() {
+    var cat = categories[currentCategory];
+    unitSelect.innerHTML = "";
+    cat.units.forEach(function (u) {
+      var opt = document.createElement("option");
+      opt.value = u[0];
+      opt.textContent = u[1];
+      unitSelect.appendChild(opt);
+    });
+    unitSelect.value = defaultUnit[currentCategory] || cat.units[0][0];
+  }
+
+  function formatNumber(n) {
+    if (!isFinite(n)) return "—";
+    var abs = Math.abs(n);
+    if (abs !== 0 && (abs < 0.0001 || abs >= 1e12)) {
+      return n.toExponential(4);
+    }
+    var rounded = Math.round(n * 1e6) / 1e6;
+    return rounded.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  }
+
+  function render() {
+    var raw = valueInput.value.trim();
+    var value = parseFloat(raw);
+
+    resultsBody.innerHTML = "";
+
+    if (raw === "" || isNaN(value)) {
+      showBanner("Enter a numeric value to convert.", "warning");
+      return;
+    }
+
+    var cat = categories[currentCategory];
+    var fromUnit = unitSelect.value;
+    var warning = "";
+
+    cat.units.forEach(function (u) {
+      var code = u[0];
+      var name = u[1];
+      var result;
+
+      if (cat.kind === "linear") {
+        var fromFactor = cat.units.find(function (x) {
+          return x[0] === fromUnit;
+        })[2];
+        var toFactor = u[2];
+        result = (value * fromFactor) / toFactor;
+      } else {
+        var celsius = tempToCelsius(value, fromUnit);
+        result = celsiusTo(celsius, code);
+        if (code === "k" && result < 0) {
+          warning = "Below absolute zero (0 K) — this isn't a physically possible temperature.";
+        }
+      }
+
+      var tr = document.createElement("tr");
+      var tdName = document.createElement("td");
+      tdName.textContent = name;
+      var tdVal = document.createElement("td");
+      tdVal.className = "val";
+      tdVal.textContent = formatNumber(result);
+      tr.appendChild(tdName);
+      tr.appendChild(tdVal);
+      resultsBody.appendChild(tr);
+    });
+
+    showBanner(warning, "warning");
+  }
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (t) {
+        t.classList.remove("active");
+      });
+      tab.classList.add("active");
+      currentCategory = tab.dataset.category;
+      populateUnits();
+      render();
+    });
+  });
+
+  unitSelect.addEventListener("change", render);
+  valueInput.addEventListener("input", render);
+
+  populateUnits();
+  render();
+})();
+</script>
+</body>
+</html>
