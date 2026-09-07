@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bulk Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📦 Bulk Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Bulk Toolkit</h1>
+  <p class="subtitle">
+    Batch-run the video and art tools across many files at once. Everything still runs locally in
+    your tab — no uploads, no accounts, no server.
+  </p>
+
+  <div class="tool-grid">
+    <a class="tool-card" href="video-bulk.html">
+      <span class="icon">🎬</span>
+      <div class="name">Video Bulk</div>
+      <div class="desc">Apply one video operation to a whole batch of files, one after another.</div>
+    </a>
+    <a class="tool-card" href="art-bulk.html">
+      <span class="icon">🧬</span>
+      <div class="name">Art Bulk</div>
+      <div class="desc">Generate a grid of algorithmic art variations from randomized seeds.</div>
+    </a>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm and p5.js. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+</body>
+</html>
