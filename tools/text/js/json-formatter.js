@@ -70,14 +70,14 @@
 
   function describeError(err, text) {
     var msg = err.message || String(err);
+    // Some engines already include a line/column in the message; don't double it up.
+    if (/line \d+ column \d+/i.test(msg)) return msg;
     var m = msg.match(/position (\d+)/i);
     if (m) {
       var pos = parseInt(m[1], 10);
       var lc = lineColFromOffset(text, pos);
       return msg + " (line " + lc.line + ", column " + lc.col + ")";
     }
-    var lm = msg.match(/line (\d+) column (\d+)/i);
-    if (lm) return msg;
     return msg;
   }
 

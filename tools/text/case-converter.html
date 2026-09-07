@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Markdown Preview</title>
+<title>Case Converter</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -14,20 +14,16 @@
 </header>
 
 <main>
-  <h1>Markdown Preview</h1>
-  <p class="subtitle">Live markdown-to-HTML preview with a small vanilla-JS renderer. Output is escaped, so raw HTML in your source is shown as text, not executed.</p>
+  <h1>Case Converter</h1>
+  <p class="subtitle">Convert text between common code and prose casing styles, live. Runs entirely in your browser.</p>
 
   <div class="card">
-    <div class="field-label-row">
-      <h2 style="margin:0">Markdown</h2>
-      <button class="btn btn-secondary" id="sample-btn" type="button">Load sample</button>
-    </div>
-    <textarea id="input" rows="16" spellcheck="false" placeholder="# Heading&#10;&#10;Some **bold** and _italic_ text with `inline code`."></textarea>
+    <textarea id="input" rows="4" spellcheck="false" placeholder="Type or paste text here, e.g. Hello World Example"></textarea>
   </div>
 
   <div class="card">
-    <h2>Preview</h2>
-    <div class="md-preview" id="preview"></div>
+    <h2>Results</h2>
+    <div class="case-grid" id="results"></div>
   </div>
 </main>
 
@@ -35,6 +31,6 @@
 
 <script src="nav.js"></script>
 <script src="js/common.js"></script>
-<script src="js/markdown-preview.js"></script>
+<script src="js/case-converter.js"></script>
 </body>
 </html>
