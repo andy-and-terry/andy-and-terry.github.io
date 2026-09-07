@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hash Generator</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Text Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+  <a href="../index.html" style="color:var(--text-faint);font-size:13px;white-space:nowrap">← All Toolkits</a>
+</header>
+
+<main>
+  <h1>Hash Generator</h1>
+  <p class="subtitle">Compute MD5, SHA-1, SHA-256, and SHA-512 for text or a file. MD5/SHA run locally &mdash; SHA via the browser's SubtleCrypto, MD5 via a small vanilla-JS implementation.</p>
+
+  <div class="card">
+    <h2>Text input</h2>
+    <textarea id="text-input" rows="6" spellcheck="false" placeholder="Type or paste text to hash"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Or a file</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0">
+      <strong>Click to choose a file</strong> or drag one here.
+      <input type="file" id="file-input" style="display:none" />
+    </div>
+    <div class="file-info" id="file-info" hidden>
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+      <button class="btn btn-secondary" id="clear-file" type="button">Use text instead</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Hashes</h2>
+    <div id="hash-status" class="hint"></div>
+    <div class="case-grid" id="hash-results"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs entirely in your browser. Nothing you type or upload is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/md5.js"></script>
+<script src="js/hash-generator.js"></script>
+</body>
+</html>

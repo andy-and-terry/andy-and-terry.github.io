@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Case Converter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Text Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+  <a href="../index.html" style="color:var(--text-faint);font-size:13px;white-space:nowrap">← All Toolkits</a>
+</header>
+
+<main>
+  <h1>Case Converter</h1>
+  <p class="subtitle">Convert text between common code and prose casing styles, live. Runs entirely in your browser.</p>
+
+  <div class="card">
+    <textarea id="input" rows="4" spellcheck="false" placeholder="Type or paste text here, e.g. Hello World Example"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Results</h2>
+    <div class="case-grid" id="results"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs entirely in your browser. Nothing you type is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/case-converter.js"></script>
+</body>
+</html>
