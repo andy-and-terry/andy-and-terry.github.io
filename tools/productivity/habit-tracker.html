@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Habit Tracker</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Productivity Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main class="wide">
+  <h1>Habit Tracker</h1>
+  <p class="subtitle">
+    Click a day to mark a habit done. Shows the last 10 weeks. Saved automatically in this browser.
+  </p>
+
+  <form class="add-habit-form" id="add-habit-form">
+    <input type="text" id="habit-name" placeholder="New habit, e.g. Read 20 minutes" maxlength="80" />
+    <button type="submit" class="btn btn-primary">Add Habit</button>
+  </form>
+
+  <div class="card" id="habit-list-card">
+    <div id="habit-list"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No data leaves your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "productivity-habits";
+  var WINDOW_DAYS = 70;
+
+  var habits = loadHabits();
+  var listEl = document.getElementById("habit-list");
+  var form = document.getElementById("add-habit-form");
+  var nameInput = document.getElementById("habit-name");
+
+  function loadHabits() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(function (h) {
+          return h && typeof h.id === "string" && typeof h.name === "string";
+        })
+        .map(function (h) {
+          return { id: h.id, name: h.name, logs: h.logs && typeof h.logs === "object" ? h.logs : {} };
+        });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveHabits() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+    } catch (e) {
+      /* localStorage unavailable — tracker still works this session */
+    }
+  }
+
+  function makeId() {
+    return "h" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function startOfDay(d) {
+    var copy = new Date(d);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+  }
+
+  function dateKey(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function parseKey(key) {
+    var parts = key.split("-").map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function computeStreaks(logs) {
+    var today = startOfDay(new Date());
+    function isDone(d) {
+      return !!logs[dateKey(d)];
+    }
+    var current = 0;
+    var cursor = new Date(today);
+    if (!isDone(cursor)) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    while (isDone(cursor)) {
+      current++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    var keys = Object.keys(logs)
+      .filter(function (k) {
+        return logs[k];
+      })
+      .sort();
+    var best = 0;
+    var run = 0;
+    var prevDate = null;
+    keys.forEach(function (k) {
+      var d = parseKey(k);
+      if (prevDate) {
+        var diffDays = Math.round((d - prevDate) / 86400000);
+        run = diffDays === 1 ? run + 1 : 1;
+      } else {
+        run = 1;
+      }
+      if (run > best) best = run;
+      prevDate = d;
+    });
+    best = Math.max(best, current);
+    return { current: current, best: best };
+  }
+
+  function addHabit(name) {
+    var trimmed = name.trim();
+    if (!trimmed) return;
+    habits.push({ id: makeId(), name: trimmed, logs: {} });
+    saveHabits();
+    render();
+  }
+
+  function deleteHabit(id) {
+    var habit = habits.find(function (h) {
+      return h.id === id;
+    });
+    if (!habit) return;
+    if (!window.confirm('Delete "' + habit.name + '" and its history?')) return;
+    habits = habits.filter(function (h) {
+      return h.id !== id;
+    });
+    saveHabits();
+    render();
+  }
+
+  function toggleDay(habitId, key, todayKey) {
+    if (key > todayKey) return;
+    var habit = habits.find(function (h) {
+      return h.id === habitId;
+    });
+    if (!habit) return;
+    if (habit.logs[key]) {
+      delete habit.logs[key];
+    } else {
+      habit.logs[key] = true;
+    }
+    saveHabits();
+    render();
+  }
+
+  function render() {
+    listEl.innerHTML = "";
+
+    if (habits.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No habits yet — add one above to start tracking.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    var today = startOfDay(new Date());
+    var todayKey = dateKey(today);
+    var days = [];
+    for (var i = WINDOW_DAYS - 1; i >= 0; i--) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      days.push(d);
+    }
+
+    habits.forEach(function (habit) {
+      var streaks = computeStreaks(habit.logs);
+
+      var row = document.createElement("div");
+      row.className = "habit-row";
+
+      var head = document.createElement("div");
+      head.className = "habit-head";
+
+      var nameEl = document.createElement("div");
+      nameEl.className = "habit-name";
+      nameEl.textContent = habit.name;
+      head.appendChild(nameEl);
+
+      var right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.alignItems = "center";
+      right.style.gap = "14px";
+
+      var streaksEl = document.createElement("div");
+      streaksEl.className = "habit-streaks";
+      streaksEl.innerHTML =
+        "<span>🔥 " +
+        streaks.current +
+        " day" +
+        (streaks.current === 1 ? "" : "s") +
+        "</span><span>Best: " +
+        streaks.best +
+        "</span>";
+      right.appendChild(streaksEl);
+
+      var del = document.createElement("button");
+      del.className = "btn-icon";
+      del.type = "button";
+      del.title = "Delete habit";
+      del.setAttribute("aria-label", "Delete habit " + habit.name);
+      del.textContent = "✕";
+      del.addEventListener("click", function () {
+        deleteHabit(habit.id);
+      });
+      right.appendChild(del);
+
+      head.appendChild(right);
+      row.appendChild(head);
+
+      var grid = document.createElement("div");
+      grid.className = "habit-grid";
+      days.forEach(function (d) {
+        var key = dateKey(d);
+        var cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "habit-cell" + (habit.logs[key] ? " done" : "") + (key === todayKey ? " today" : "");
+        cell.title = key + (habit.logs[key] ? " — done" : "");
+        cell.setAttribute(
+          "aria-label",
+          habit.name + " on " + key + (habit.logs[key] ? ", done" : ", not done")
+        );
+        cell.addEventListener("click", function () {
+          toggleDay(habit.id, key, todayKey);
+        });
+        grid.appendChild(cell);
+      });
+      row.appendChild(grid);
+
+      listEl.appendChild(row);
+    });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    addHabit(nameInput.value);
+    nameInput.value = "";
+    nameInput.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
