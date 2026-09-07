@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Collage Maker — Image Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🖼️ Image Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Collage Maker</h1>
+  <p class="subtitle">Arrange several photos into a single grid image.</p>
+
+  <div class="card">
+    <h2>1. Choose images</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose image files">
+      <div><strong>Click to choose</strong> or drag multiple images here</div>
+      <input type="file" id="file-input" accept="image/*" multiple hidden />
+    </div>
+    <div id="load-error"></div>
+    <ul class="file-list" id="file-list"></ul>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Layout</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Columns</label>
+        <input type="number" id="cols-input" min="1" max="10" value="2" />
+      </div>
+      <div class="field">
+        <label>Gap (px)</label>
+        <input type="number" id="gap-input" min="0" max="100" value="8" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Background color</label>
+      <input type="color" id="bg-input" value="#0b0d12" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Build collage</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <img class="preview" id="after-preview" alt="Collage preview" />
+    <div class="file-info"><span id="after-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="js/common.js"></script>
+<script src="nav.js"></script>
+<script src="js/collage.js"></script>
+</body>
+</html>
