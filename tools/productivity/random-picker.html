@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Random Picker</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Productivity Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Random Picker</h1>
+  <p class="subtitle">Add your options, then spin the wheel to pick one at random. Your list is saved automatically.</p>
+
+  <div class="card">
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <canvas id="wheel-canvas" width="320" height="320"></canvas>
+      <div class="winner-banner" id="winner-banner" aria-live="polite"></div>
+      <button class="btn btn-primary" id="btn-spin" disabled>Spin</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Entries</h2>
+    <form class="add-habit-form" id="add-entry-form">
+      <input type="text" id="entry-input" placeholder="Add an option…" maxlength="60" />
+      <button type="submit" class="btn btn-secondary">Add</button>
+    </form>
+    <ul class="entry-list" id="entry-list"></ul>
+    <div class="empty-state" id="entry-empty">No entries yet — add at least one to spin.</div>
+    <div class="btn-row" style="margin-top: 12px">
+      <button class="btn btn-danger" id="btn-clear-all">Clear All</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No data leaves your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "productivity-picker";
+  var canvas = document.getElementById("wheel-canvas");
+  var ctx = canvas.getContext("2d");
+  var entryList = document.getElementById("entry-list");
+  var entryEmpty = document.getElementById("entry-empty");
+  var entryInput = document.getElementById("entry-input");
+  var addForm = document.getElementById("add-entry-form");
+  var btnSpin = document.getElementById("btn-spin");
+  var btnClearAll = document.getElementById("btn-clear-all");
+  var winnerBanner = document.getElementById("winner-banner");
+
+  var entries = loadEntries();
+  var rotation = 0;
+  var spinning = false;
+
+  function loadEntries() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(function (e) {
+        return typeof e === "string" && e.trim().length > 0;
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveEntries() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    } catch (e) {
+      /* localStorage unavailable — list still works this session */
+    }
+  }
+
+  function colorFor(i, n) {
+    var hue = Math.round((i * 360) / n);
+    return "hsl(" + hue + ", 62%, 48%)";
+  }
+
+  function truncate(text, max) {
+    return text.length > max ? text.slice(0, max - 1) + "…" : text;
+  }
+
+  function drawWheel() {
+    var w = canvas.width;
+    var h = canvas.height;
+    var cx = w / 2;
+    var cy = h / 2;
+    var radius = Math.min(w, h) / 2 - 4;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (entries.length === 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#14171f";
+      ctx.fill();
+      ctx.fillStyle = "#656d7a";
+      ctx.font = "14px -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Add entries to spin", cx, cy);
+      return;
+    }
+
+    var n = entries.length;
+    var sliceAngle = (Math.PI * 2) / n;
+
+    entries.forEach(function (text, i) {
+      var start = i * sliceAngle - Math.PI / 2;
+      var end = start + sliceAngle;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, start, end);
+      ctx.closePath();
+      ctx.fillStyle = colorFor(i, n);
+      ctx.fill();
+      ctx.strokeStyle = "#0b0d12";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + sliceAngle / 2);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#f5f6f8";
+      ctx.font = "600 13px -apple-system, sans-serif";
+      ctx.fillText(truncate(text, 18), radius - 12, 0);
+      ctx.restore();
+    });
+  }
+
+  function renderEntryList() {
+    entryList.innerHTML = "";
+    entryEmpty.style.display = entries.length === 0 ? "block" : "none";
+    btnSpin.disabled = entries.length === 0 || spinning;
+
+    entries.forEach(function (text, i) {
+      var li = document.createElement("li");
+      var nameSpan = document.createElement("span");
+      nameSpan.className = "name";
+      nameSpan.textContent = text;
+      li.appendChild(nameSpan);
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-icon";
+      del.title = "Remove entry";
+      del.setAttribute("aria-label", "Remove " + text);
+      del.textContent = "✕";
+      del.disabled = spinning;
+      del.addEventListener("click", function () {
+        entries.splice(i, 1);
+        saveEntries();
+        winnerBanner.textContent = "";
+        renderEntryList();
+        drawWheel();
+      });
+      li.appendChild(del);
+
+      entryList.appendChild(li);
+    });
+  }
+
+  function addEntry(text) {
+    var trimmed = text.trim();
+    if (!trimmed) return;
+    entries.push(trimmed);
+    saveEntries();
+    renderEntryList();
+    drawWheel();
+  }
+
+  addForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (spinning) return;
+    addEntry(entryInput.value);
+    entryInput.value = "";
+    entryInput.focus();
+  });
+
+  btnClearAll.addEventListener("click", function () {
+    if (spinning || entries.length === 0) return;
+    entries = [];
+    saveEntries();
+    winnerBanner.textContent = "";
+    renderEntryList();
+    drawWheel();
+  });
+
+  btnSpin.addEventListener("click", function () {
+    if (spinning || entries.length === 0) return;
+    spinning = true;
+    btnSpin.disabled = true;
+    entryInput.disabled = true;
+    addForm.querySelector("button").disabled = true;
+    btnClearAll.disabled = true;
+    entryList.querySelectorAll("button").forEach(function (b) {
+      b.disabled = true;
+    });
+    winnerBanner.textContent = "";
+
+    var n = entries.length;
+    var sliceAngle = 360 / n;
+    var winnerIndex = Math.floor(Math.random() * n);
+    var targetMod = (((-(winnerIndex + 0.5) * sliceAngle) % 360) + 360) % 360;
+    var currentMod = ((rotation % 360) + 360) % 360;
+    var delta = ((targetMod - currentMod) % 360 + 360) % 360;
+    var extraSpins = 6;
+    rotation = rotation + extraSpins * 360 + delta;
+
+    canvas.style.transition = "transform 4.2s cubic-bezier(0.17, 0.67, 0.16, 0.99)";
+    canvas.style.transform = "rotate(" + rotation + "deg)";
+
+    var finished = false;
+    function onDone() {
+      if (finished) return;
+      finished = true;
+      canvas.removeEventListener("transitionend", onDone);
+      spinning = false;
+      winnerBanner.textContent = "🎉 " + entries[winnerIndex];
+      entryInput.disabled = false;
+      addForm.querySelector("button").disabled = false;
+      btnClearAll.disabled = false;
+      renderEntryList();
+    }
+    canvas.addEventListener("transitionend", onDone);
+    // Fallback in case transitionend doesn't fire (e.g. tab backgrounded)
+    setTimeout(onDone, 4600);
+  });
+
+  renderEntryList();
+  drawWheel();
+})();
+</script>
+</body>
+</html>
