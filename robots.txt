@@ -1,4 +1,22 @@
+# Disallow all
 User-agent: *
+Disallow: /
+
+# Allow Google
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+# Allow Claude
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: anthropic-ai
 Allow: /
 
 Sitemap: https://andy-and-terry.github.io/sitemap.xml
