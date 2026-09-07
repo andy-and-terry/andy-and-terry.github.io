@@ -1,4 +1,4 @@
-/* Shared dark theme for the browser video toolkit. No build step: plain CSS, loaded by every tool page. */
+/* Shared dark theme for the browser image toolkit. No build step: plain CSS, loaded by every tool page. */
 
 :root {
   --bg: #0b0d12;
@@ -473,7 +473,7 @@ footer.page-footer {
   padding: 20px;
 }
 
-/* Crop tool: draggable/resizable crop box overlaid on the video preview */
+/* Crop tool: draggable/resizable crop box overlaid on the image preview */
 
 .crop-stage {
   position: relative;
@@ -483,7 +483,8 @@ footer.page-footer {
   touch-action: none;
 }
 
-.crop-stage video {
+.crop-stage video,
+.crop-stage img {
   display: block;
   margin: 0;
   max-width: 100%;
