@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Color Tools</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Misc Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Color Tools</h1>
+  <p class="subtitle">
+    Pick a color, convert between formats, generate a palette, and check contrast — all live,
+    all local.
+  </p>
+
+  <div class="card">
+    <h2>Picker &amp; Converter</h2>
+    <div id="picker-banner"></div>
+    <div class="color-row">
+      <input type="color" id="color-picker" value="#7c8cff" />
+      <div class="color-fields">
+        <div class="field">
+          <label for="hex-input">HEX</label>
+          <input type="text" id="hex-input" value="#7c8cff" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="rgb-input">RGB</label>
+          <input type="text" id="rgb-input" value="rgb(124, 140, 255)" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label for="hsl-input">HSL</label>
+          <input type="text" id="hsl-input" value="hsl(233, 100%, 74%)" spellcheck="false" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Palette Generator</h2>
+    <div class="field">
+      <label for="palette-type">Type</label>
+      <select id="palette-type">
+        <option value="shades">Shades &amp; Tints</option>
+        <option value="complementary">Complementary</option>
+        <option value="analogous">Analogous</option>
+        <option value="triadic">Triadic</option>
+        <option value="monochromatic">Monochromatic</option>
+      </select>
+    </div>
+    <div class="swatch-grid" id="palette-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Contrast Checker</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="fg-input">Text color</label>
+        <input type="color" id="fg-input" value="#e6e8ec" />
+      </div>
+      <div class="field">
+        <label for="bg-input">Background color</label>
+        <input type="color" id="bg-input" value="#0b0d12" />
+      </div>
+    </div>
+    <div class="contrast-preview" id="contrast-preview">
+      <div class="big">The quick brown fox</div>
+      <div class="small">jumps over the lazy dog</div>
+    </div>
+    <div class="contrast-score">
+      <div class="metric">
+        <div class="num" id="ratio-value">—</div>
+        <div class="label">Contrast ratio</div>
+      </div>
+      <div class="metric">
+        <div class="label">Normal text</div>
+        <div><span class="badge" id="badge-aa-normal">AA</span> <span class="badge" id="badge-aaa-normal">AAA</span></div>
+      </div>
+      <div class="metric">
+        <div class="label">Large text</div>
+        <div><span class="badge" id="badge-aa-large">AA</span> <span class="badge" id="badge-aaa-large">AAA</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. No files leave your device.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  // ---------- Color conversion helpers ----------
+  function clamp(v, min, max) {
+    return Math.min(max, Math.max(min, v));
+  }
+
+  function hexToRgb(hex) {
+    var m = hex.trim().replace(/^#/, "");
+    if (m.length === 3) {
+      m = m.split("").map(function (c) {
+        return c + c;
+      }).join("");
+    }
+    if (!/^[0-9a-fA-F]{6}$/.test(m)) return null;
+    var num = parseInt(m, 16);
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+  }
+
+  function rgbToHex(r, g, b) {
+    return (
+      "#" +
+      [r, g, b]
+        .map(function (v) {
+          return clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0");
+        })
+        .join("")
+    );
+  }
+
+  function parseRgbString(str) {
+    var m = str.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*[\d.]+\s*)?\)/i);
+    if (!m) return null;
+    var r = clamp(parseFloat(m[1]), 0, 255);
+    var g = clamp(parseFloat(m[2]), 0, 255);
+    var b = clamp(parseFloat(m[3]), 0, 255);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+    return { r: r, g: g, b: b };
+  }
+
+  function rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    var max = Math.max(r, g, b),
+      min = Math.min(r, g, b);
+    var h,
+      s,
+      l = (max + min) / 2;
+    if (max === min) {
+      h = s = 0;
+    } else {
+      var d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
+        case g:
+          h = (b - r) / d + 2;
+          break;
+        default:
+          h = (r - g) / d + 4;
+      }
+      h /= 6;
+    }
+    return { h: h * 360, s: s * 100, l: l * 100 };
+  }
+
+  function hslToRgb(h, s, l) {
+    h = ((h % 360) + 360) % 360 / 360;
+    s = clamp(s, 0, 100) / 100;
+    l = clamp(l, 0, 100) / 100;
+    var r, g, b;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      var hue2rgb = function (p, q, t) {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      var p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return { r: r * 255, g: g * 255, b: b * 255 };
+  }
+
+  function parseHslString(str) {
+    var m = str.match(/hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*[\d.]+\s*)?\)/i);
+    if (!m) return null;
+    var h = parseFloat(m[1]),
+      s = parseFloat(m[2]),
+      l = parseFloat(m[3]);
+    if (isNaN(h) || isNaN(s) || isNaN(l)) return null;
+    return hslToRgb(h, s, l);
+  }
+
+  function fmtRgb(r, g, b) {
+    return "rgb(" + Math.round(r) + ", " + Math.round(g) + ", " + Math.round(b) + ")";
+  }
+
+  function fmtHsl(h, s, l) {
+    return "hsl(" + Math.round(h) + ", " + Math.round(s) + "%, " + Math.round(l) + "%)";
+  }
+
+  // ---------- Picker & converter ----------
+  var colorPicker = document.getElementById("color-picker");
+  var hexInput = document.getElementById("hex-input");
+  var rgbInput = document.getElementById("rgb-input");
+  var hslInput = document.getElementById("hsl-input");
+  var pickerBanner = document.getElementById("picker-banner");
+
+  function showPickerError(msg) {
+    if (!msg) {
+      pickerBanner.innerHTML = "";
+      return;
+    }
+    pickerBanner.innerHTML = '<div class="banner banner-error">' + msg + "</div>";
+  }
+
+  function setFromRgb(rgb, skip) {
+    var hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+    var hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    colorPicker.value = hex;
+    if (skip !== "hex") hexInput.value = hex;
+    if (skip !== "rgb") rgbInput.value = fmtRgb(rgb.r, rgb.g, rgb.b);
+    if (skip !== "hsl") hslInput.value = fmtHsl(hsl.h, hsl.s, hsl.l);
+    showPickerError("");
+    renderPalette();
+  }
+
+  colorPicker.addEventListener("input", function () {
+    var rgb = hexToRgb(colorPicker.value);
+    if (rgb) setFromRgb(rgb);
+  });
+
+  hexInput.addEventListener("input", function () {
+    var rgb = hexToRgb(hexInput.value);
+    if (rgb) {
+      setFromRgb(rgb, "hex");
+    } else {
+      showPickerError("Enter a valid hex color, like #7c8cff.");
+    }
+  });
+
+  rgbInput.addEventListener("input", function () {
+    var rgb = parseRgbString(rgbInput.value);
+    if (rgb) {
+      setFromRgb(rgb, "rgb");
+    } else {
+      showPickerError("Enter a valid rgb() color, like rgb(124, 140, 255).");
+    }
+  });
+
+  hslInput.addEventListener("input", function () {
+    var rgb = parseHslString(hslInput.value);
+    if (rgb) {
+      setFromRgb(rgb, "hsl");
+    } else {
+      showPickerError("Enter a valid hsl() color, like hsl(233, 100%, 74%).");
+    }
+  });
+
+  function currentRgb() {
+    return hexToRgb(colorPicker.value) || { r: 124, g: 140, b: 255 };
+  }
+
+  // ---------- Palette generator ----------
+  var paletteType = document.getElementById("palette-type");
+  var paletteGrid = document.getElementById("palette-grid");
+
+  function makeSwatch(hex) {
+    var btn = document.createElement("button");
+    btn.className = "swatch";
+    btn.type = "button";
+    btn.title = "Click to copy " + hex;
+    var color = document.createElement("span");
+    color.className = "swatch-color";
+    color.style.background = hex;
+    color.style.display = "block";
+    var label = document.createElement("span");
+    label.className = "swatch-label";
+    label.textContent = hex;
+    btn.appendChild(color);
+    btn.appendChild(label);
+    btn.addEventListener("click", function () {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(hex);
+        label.textContent = "Copied!";
+        setTimeout(function () {
+          label.textContent = hex;
+        }, 900);
+      }
+    });
+    return btn;
+  }
+
+  function renderPalette() {
+    var rgb = currentRgb();
+    var hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    var hexes = [];
+
+    switch (paletteType.value) {
+      case "shades": {
+        var steps = [90, 75, 60, 45, 30, 15];
+        hexes = steps.map(function (l) {
+          var c = hslToRgb(hsl.h, hsl.s, l);
+          return rgbToHex(c.r, c.g, c.b);
+        });
+        break;
+      }
+      case "complementary": {
+        var c1 = hslToRgb(hsl.h, hsl.s, hsl.l);
+        var c2 = hslToRgb(hsl.h + 180, hsl.s, hsl.l);
+        hexes = [rgbToHex(c1.r, c1.g, c1.b), rgbToHex(c2.r, c2.g, c2.b)];
+        break;
+      }
+      case "analogous": {
+        [-30, -15, 0, 15, 30].forEach(function (d) {
+          var c = hslToRgb(hsl.h + d, hsl.s, hsl.l);
+          hexes.push(rgbToHex(c.r, c.g, c.b));
+        });
+        break;
+      }
+      case "triadic": {
+        [0, 120, 240].forEach(function (d) {
+          var c = hslToRgb(hsl.h + d, hsl.s, hsl.l);
+          hexes.push(rgbToHex(c.r, c.g, c.b));
+        });
+        break;
+      }
+      case "monochromatic": {
+        [20, 35, 50, 65, 80].forEach(function (s) {
+          var c = hslToRgb(hsl.h, s, hsl.l);
+          hexes.push(rgbToHex(c.r, c.g, c.b));
+        });
+        break;
+      }
+    }
+
+    paletteGrid.innerHTML = "";
+    hexes.forEach(function (hex) {
+      paletteGrid.appendChild(makeSwatch(hex));
+    });
+  }
+
+  paletteType.addEventListener("change", renderPalette);
+
+  // ---------- Contrast checker ----------
+  var fgInput = document.getElementById("fg-input");
+  var bgInput = document.getElementById("bg-input");
+  var contrastPreview = document.getElementById("contrast-preview");
+  var ratioValue = document.getElementById("ratio-value");
+
+  function relLuminance(rgb) {
+    var srgb = [rgb.r, rgb.g, rgb.b].map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  }
+
+  function contrastRatio(rgb1, rgb2) {
+    var l1 = relLuminance(rgb1);
+    var l2 = relLuminance(rgb2);
+    var lighter = Math.max(l1, l2);
+    var darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function setBadge(el, pass) {
+    el.textContent = (pass ? "✓ " : "✗ ") + el.dataset.label;
+    el.className = "badge " + (pass ? "badge-pass" : "badge-fail");
+  }
+
+  var badgeAaNormal = document.getElementById("badge-aa-normal");
+  var badgeAaaNormal = document.getElementById("badge-aaa-normal");
+  var badgeAaLarge = document.getElementById("badge-aa-large");
+  var badgeAaaLarge = document.getElementById("badge-aaa-large");
+  badgeAaNormal.dataset.label = "AA";
+  badgeAaaNormal.dataset.label = "AAA";
+  badgeAaLarge.dataset.label = "AA";
+  badgeAaaLarge.dataset.label = "AAA";
+
+  function renderContrast() {
+    var fg = hexToRgb(fgInput.value);
+    var bg = hexToRgb(bgInput.value);
+    if (!fg || !bg) return;
+
+    var ratio = contrastRatio(fg, bg);
+    ratioValue.textContent = ratio.toFixed(2) + ":1";
+    contrastPreview.style.color = fgInput.value;
+    contrastPreview.style.background = bgInput.value;
+
+    setBadge(badgeAaNormal, ratio >= 4.5);
+    setBadge(badgeAaaNormal, ratio >= 7);
+    setBadge(badgeAaLarge, ratio >= 3);
+    setBadge(badgeAaaLarge, ratio >= 4.5);
+  }
+
+  fgInput.addEventListener("input", renderContrast);
+  bgInput.addEventListener("input", renderContrast);
+
+  // ---------- init ----------
+  renderPalette();
+  renderContrast();
+})();
+</script>
+</body>
+</html>
