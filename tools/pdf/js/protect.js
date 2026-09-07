@@ -1,4 +1,6 @@
-/* Protect tool: add/remove PDF password protection using the @cantoo/pdf-lib fork, which supports encryption. */
+/* Protect tool: add/remove PDF password protection using the @cantoo/pdf-lib fork, which supports encryption.
+   Both directions copy pages into a fresh PDFDocument before saving, since re-saving a
+   loaded-and-decrypted document directly can leave stale encryption metadata behind. */
 (function () {
   var dropZone = document.getElementById("drop-zone");
   var fileInput = document.getElementById("file-input");
@@ -65,17 +67,9 @@
 
     try {
       currentBytes = await file.arrayBuffer();
-      try {
-        await PDFLib.PDFDocument.load(currentBytes.slice(0));
-        isEncrypted = false;
-      } catch (err) {
-        if (err instanceof PDFLib.EncryptedPDFError) {
-          isEncrypted = true;
-          modeSelect.value = "remove";
-        } else {
-          throw err;
-        }
-      }
+      var probe = await PDFLib.PDFDocument.load(currentBytes.slice(0), { ignoreEncryption: true });
+      isEncrypted = !!probe.isEncrypted;
+      if (isEncrypted) modeSelect.value = "remove";
       controlsCard.style.display = "block";
       updateFieldVisibility();
       setStatus("", false);
@@ -135,24 +129,31 @@
           loadOpts.password = pw;
         }
 
-        var doc;
+        var srcDoc;
         try {
-          doc = await PDFLib.PDFDocument.load(currentBytes.slice(0), loadOpts);
+          srcDoc = await PDFLib.PDFDocument.load(currentBytes.slice(0), loadOpts);
         } catch (err) {
-          if (err instanceof PDFLib.EncryptedPDFError) {
-            throw new Error("Incorrect password, or this file uses an encryption method that isn't supported.");
-          }
-          throw new Error("This file couldn't be read. It may be corrupt.");
+          throw new Error("Incorrect password, or this file couldn't be unlocked.");
         }
 
-        progressFill.style.width = "70%";
+        progressFill.style.width = "55%";
+
+        // Rebuild into a fresh document so no stale encryption metadata survives either way.
+        var outDoc = await PDFLib.PDFDocument.create();
+        var copiedPages = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+        copiedPages.forEach(function (page) {
+          outDoc.addPage(page);
+        });
+
+        progressFill.style.width = "75%";
         var outBytes;
         if (mode === "add") {
           var newPw = newPasswordInput.value;
           if (!newPw) throw new Error("Enter a new password to protect this file with.");
-          outBytes = await doc.save({ userPassword: newPw, ownerPassword: newPw });
+          outDoc.encrypt({ userPassword: newPw, ownerPassword: newPw });
+          outBytes = await outDoc.save();
         } else {
-          outBytes = await doc.save();
+          outBytes = await outDoc.save();
         }
 
         var blob = new Blob([outBytes], { type: "application/pdf" });
