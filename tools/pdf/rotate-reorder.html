@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rotate &amp; Reorder — PDF Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+<style>
+  .page-tile { position: relative; cursor: grab; border: 2px solid transparent; border-radius: 8px; padding: 4px; background: var(--bg-inset); }
+  .page-tile.dragging { opacity: 0.4; }
+  .page-tile canvas { width: 100%; border-radius: 4px; display: block; transition: transform 0.15s; }
+  .page-tile .tile-footer { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+  .page-tile .page-label { font-size: 11px; color: var(--text-faint); }
+  .page-tile .tile-btn { background:none; border:1px solid var(--border); color: var(--text-dim); border-radius:6px; cursor:pointer; font-size:12px; padding:2px 6px; }
+  .page-tile .tile-btn:hover { color: var(--text); border-color: var(--accent); }
+  .page-tile .remove-btn { position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">📄 PDF Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Rotate &amp; Reorder</h1>
+  <p class="subtitle">Drag thumbnails to reorder pages, rotate individual pages 90° at a time, or remove pages, then save.</p>
+
+  <div class="card">
+    <h2>1. Choose a PDF</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose a PDF file">
+      <div><strong>Click to choose</strong> or drag a PDF file here</div>
+      <input type="file" id="file-input" accept="application/pdf" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span><span id="file-size"></span>
+    </div>
+  </div>
+
+  <div class="card" id="thumbs-card" style="display:none">
+    <h2>2. Pages</h2>
+    <div class="hint" style="margin-bottom:10px">Drag to reorder. Use the rotate button on each page, or the × to remove it.</div>
+    <div class="thumb-grid" id="thumb-grid"></div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>3. Save</h2>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" value="edited.pdf" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Save PDF</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>4. Result</h2>
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via pdf-lib and pdf.js. No files leave your device.</footer>
+
+<script src="lib/pdf-lib.min.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script src="nav.js"></script>
+<script src="js/pdf-common.js"></script>
+<script src="js/rotate-reorder.js"></script>
+</body>
+</html>

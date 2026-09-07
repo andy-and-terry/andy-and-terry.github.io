@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JSON Formatter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧰 Text Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+  <a href="../index.html" style="color:var(--text-faint);font-size:13px;white-space:nowrap">← All Toolkits</a>
+</header>
+
+<main>
+  <h1>JSON Formatter</h1>
+  <p class="subtitle">Paste JSON to validate, format, minify, and explore it as a collapsible tree. Everything runs locally in your browser.</p>
+
+  <div class="card">
+    <h2>Input</h2>
+    <div class="field">
+      <textarea id="input" rows="12" spellcheck="false" placeholder='{"hello": "world", "list": [1, 2, 3]}'></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="minify-toggle" type="button" aria-pressed="false">Minify output</button>
+      <button class="btn btn-secondary" id="sample-btn" type="button">Load sample</button>
+      <button class="btn btn-secondary" id="clear-btn" type="button">Clear</button>
+    </div>
+    <div id="error-banner" class="banner banner-error" hidden></div>
+  </div>
+
+  <div class="card" id="output-card" hidden>
+    <div class="field-label-row">
+      <h2 style="margin:0">Formatted</h2>
+      <button class="copy-btn" id="copy-formatted" type="button">Copy</button>
+    </div>
+    <pre class="output-box" id="formatted-output"></pre>
+  </div>
+
+  <div class="card" id="tree-card" hidden>
+    <h2>Tree View</h2>
+    <div class="btn-row" style="margin-bottom:10px">
+      <button class="btn btn-secondary" id="expand-all" type="button">Expand all</button>
+      <button class="btn btn-secondary" id="collapse-all" type="button">Collapse all</button>
+    </div>
+    <div class="json-tree" id="tree-root"></div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs entirely in your browser. Nothing you type is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script src="js/common.js"></script>
+<script src="js/json-formatter.js"></script>
+</body>
+</html>

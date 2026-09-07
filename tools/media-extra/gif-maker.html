@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GIF Maker — Media Extras</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🧪 Media Extras</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>GIF Maker</h1>
+  <p class="subtitle">Turn a video clip or a set of images into an animated GIF.</p>
+
+  <div class="mode-toggle" role="tablist">
+    <button type="button" id="mode-video-btn" class="active" role="tab" aria-selected="true">Video → GIF</button>
+    <button type="button" id="mode-images-btn" role="tab" aria-selected="false">Images → GIF</button>
+  </div>
+
+  <!-- Video mode -->
+  <div id="video-mode">
+    <div class="card">
+      <h2>1. Choose a video</h2>
+      <div class="drop-zone" id="video-drop-zone" tabindex="0" role="button" aria-label="Choose a video file">
+        <div><strong>Click to choose</strong> or drag a video file here</div>
+        <input type="file" id="video-file-input" accept="video/*" hidden />
+      </div>
+      <div class="file-info" id="video-file-info" style="display:none">
+        <span id="video-file-name"></span>
+        <span id="video-file-size"></span>
+      </div>
+      <video id="video-preview" controls style="display:none"></video>
+    </div>
+
+    <div class="card" id="video-controls-card" style="display:none">
+      <h2>2. Trim & options</h2>
+      <div class="field">
+        <label>Start <span class="value-pill" id="start-pill">0:00.0</span> — End <span class="value-pill" id="end-pill">0:00.0</span></label>
+        <input type="range" id="start-range" min="0" max="0" step="0.1" value="0" />
+        <input type="range" id="end-range" min="0" max="0" step="0.1" value="0" />
+      </div>
+      <div class="btn-row" style="margin-bottom:16px">
+        <button class="btn btn-secondary" id="set-start-btn" type="button">Set start to current time</button>
+        <button class="btn btn-secondary" id="set-end-btn" type="button">Set end to current time</button>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>FPS <span class="value-pill" id="fps-pill">10</span></label>
+          <input type="range" id="fps-range" min="2" max="30" step="1" value="10" />
+        </div>
+        <div class="field">
+          <label>Width (px, height auto)</label>
+          <select id="width-select">
+            <option value="240">240</option>
+            <option value="320" selected>320</option>
+            <option value="480">480</option>
+            <option value="640">640</option>
+            <option value="0">Original</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="loop-check" checked /> Loop forever</label>
+      </div>
+      <div class="field">
+        <label>Output filename</label>
+        <input type="text" id="video-output-name" />
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="video-process-btn" type="button">Make GIF</button>
+      </div>
+      <div class="status-line" id="video-status-line"></div>
+      <div class="progress-track" id="video-progress-track" style="display:none">
+        <div class="progress-fill" id="video-progress-fill"></div>
+      </div>
+      <div id="video-error-banner"></div>
+      <details class="log" id="video-log-details">
+        <summary>ffmpeg log</summary>
+        <pre id="video-log-output"></pre>
+      </details>
+    </div>
+  </div>
+
+  <!-- Images mode -->
+  <div id="images-mode" style="display:none">
+    <div class="card">
+      <h2>1. Choose images</h2>
+      <div class="drop-zone" id="images-drop-zone" tabindex="0" role="button" aria-label="Choose image files">
+        <div><strong>Click to choose</strong> or drag image files here (order = filename order)</div>
+        <input type="file" id="images-file-input" accept="image/*" multiple hidden />
+      </div>
+      <ul class="file-list" id="images-list"></ul>
+    </div>
+
+    <div class="card" id="images-controls-card" style="display:none">
+      <h2>2. Options</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>Frame delay (ms) <span class="value-pill" id="delay-pill">200</span></label>
+          <input type="range" id="delay-range" min="20" max="2000" step="10" value="200" />
+        </div>
+        <div class="field">
+          <label>Width (px, height auto)</label>
+          <select id="images-width-select">
+            <option value="240">240</option>
+            <option value="320" selected>320</option>
+            <option value="480">480</option>
+            <option value="640">640</option>
+            <option value="0">Original</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="images-loop-check" checked /> Loop forever</label>
+      </div>
+      <div class="field">
+        <label>Output filename</label>
+        <input type="text" id="images-output-name" value="images.gif" />
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="images-process-btn" type="button">Make GIF</button>
+      </div>
+      <div class="status-line" id="images-status-line"></div>
+      <div class="progress-track" id="images-progress-track" style="display:none">
+        <div class="progress-fill" id="images-progress-fill"></div>
+      </div>
+      <div id="images-error-banner"></div>
+      <details class="log" id="images-log-details">
+        <summary>ffmpeg log</summary>
+        <pre id="images-log-output"></pre>
+      </details>
+    </div>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>3. Result</h2>
+    <img class="preview" id="output-image" alt="Generated GIF preview" />
+    <div class="file-info"><span id="output-size"></span></div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="lib/ffmpeg.js"></script>
+<script src="lib/ffmpeg-util.js"></script>
+<script src="nav.js"></script>
+<script src="js/gif-maker.js"></script>
+</body>
+</html>

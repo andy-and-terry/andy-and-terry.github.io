@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>.gitignore Generator — Dev Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🛠️ Dev Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>.gitignore Generator</h1>
+  <p class="subtitle">Pick any combination of languages/frameworks/editors/OSes and combine their presets into one file.</p>
+
+  <div class="card">
+    <h2>1. Presets</h2>
+    <div class="field">
+      <label for="preset-search">Filter presets</label>
+      <input type="search" id="preset-search" placeholder="e.g. node, python, mac" autocomplete="off" />
+    </div>
+    <div class="chip-grid" id="preset-chips"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Extra patterns (optional)</h2>
+    <div class="field">
+      <label for="extra-patterns">Add your own lines, one per pattern</label>
+      <textarea id="extra-patterns" rows="4" spellcheck="false" placeholder="/my-secret-config.json&#10;*.local"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Output</h2>
+    <div class="hint" id="selected-hint" style="margin-bottom:10px"></div>
+    <div class="output-block">
+      <pre id="gitignore-output"></pre>
+      <button class="copy-btn" data-copy-target="gitignore-output" type="button">Copy</button>
+    </div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-primary" id="download-btn" type="button">Download .gitignore</button>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally in your browser. Nothing is sent anywhere.</footer>
+
+<script src="nav.js"></script>
+<script>
+(function () {
+  var PRESETS = {
+    Node: "node_modules/\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\n.pnpm-debug.log*\ndist/\nbuild/\n.env\n.env.local\n.cache/",
+    Python: "__pycache__/\n*.py[cod]\n*$py.class\n.venv/\nvenv/\nenv/\n*.egg-info/\ndist/\nbuild/\n.pytest_cache/\n.mypy_cache/\n.ipynb_checkpoints/",
+    Java: "*.class\n*.jar\n*.war\n*.ear\ntarget/\n.gradle/\nbuild/\nout/",
+    Go: "*.exe\n*.exe~\n*.dll\n*.so\n*.dylib\n*.test\n*.out\nvendor/",
+    Rust: "/target/\nCargo.lock\n**/*.rs.bk",
+    Ruby: "*.gem\n*.rbc\n/.config\n/coverage/\n/InstalledFiles\n/pkg/\n/spec/reports/\n/tmp/",
+    PHP: "vendor/\ncomposer.phar\n.env\n.env.local",
+    "C / C++": "*.o\n*.obj\n*.exe\n*.out\n*.a\n*.lib\n*.so\n*.dylib\nCMakeFiles/\nCMakeCache.txt",
+    ".NET": "bin/\nobj/\n*.user\n*.suo\n*.dll\n*.pdb",
+    Swift: ".build/\n*.xcodeproj/*\n!*.xcodeproj/project.pbxproj\nDerivedData/\n*.ipa",
+    React: "build/\n.env.local\n.env.development.local\n.env.test.local\n.env.production.local",
+    "Next.js": ".next/\nout/\nnext-env.d.ts",
+    "Vue / Nuxt": ".nuxt/\ndist/\n.output/",
+    Django: "*.sqlite3\n/media/\n/staticfiles/\nlocal_settings.py",
+    Rails: "/log/*\n/tmp/*\n/public/uploads\n.byebug_history",
+    Terraform: "*.tfstate\n*.tfstate.backup\n.terraform/\n.terraform.lock.hcl",
+    Docker: "*.pid\n.dockerignore",
+    macOS: ".DS_Store\n.AppleDouble\n.LSOverride\nIcon\r\n._*\n.Spotlight-V100\n.Trashes",
+    Windows: "Thumbs.db\nehthumbs.db\nDesktop.ini\n$RECYCLE.BIN/\n*.lnk",
+    Linux: "*~\n.fuse_hidden*\n.directory\n.Trash-*",
+    VSCode: ".vscode/*\n!.vscode/settings.json\n!.vscode/tasks.json\n!.vscode/launch.json\n!.vscode/extensions.json",
+    "IntelliJ / JetBrains": ".idea/\n*.iml\n*.iws\nout/",
+    Vim: "*.swp\n*.swo\n*~\nSession.vim",
+    Logs: "*.log\nlogs/\nnpm-debug.log*",
+    Environment: ".env\n.env.*\n!.env.example",
+  };
+
+  var CATEGORY_MAP = {
+    Node: "Languages & runtimes", Python: "Languages & runtimes", Java: "Languages & runtimes",
+    Go: "Languages & runtimes", Rust: "Languages & runtimes", Ruby: "Languages & runtimes",
+    PHP: "Languages & runtimes", "C / C++": "Languages & runtimes", ".NET": "Languages & runtimes",
+    Swift: "Languages & runtimes",
+    React: "Frameworks", "Next.js": "Frameworks", "Vue / Nuxt": "Frameworks", Django: "Frameworks",
+    Rails: "Frameworks", Terraform: "Frameworks", Docker: "Frameworks",
+    macOS: "Operating systems", Windows: "Operating systems", Linux: "Operating systems",
+    VSCode: "Editors & IDEs", "IntelliJ / JetBrains": "Editors & IDEs", Vim: "Editors & IDEs",
+    Logs: "Misc", Environment: "Misc",
+  };
+
+  var presetSearch = document.getElementById("preset-search");
+  var presetChips = document.getElementById("preset-chips");
+  var extraPatterns = document.getElementById("extra-patterns");
+  var output = document.getElementById("gitignore-output");
+  var selectedHint = document.getElementById("selected-hint");
+  var downloadBtn = document.getElementById("download-btn");
+
+  var selected = new Set(["Node", "macOS", "VSCode"]);
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderChips() {
+    var q = presetSearch.value.trim().toLowerCase();
+    var names = Object.keys(PRESETS).filter(function (name) {
+      return !q || name.toLowerCase().indexOf(q) !== -1;
+    });
+    if (names.length === 0) {
+      presetChips.innerHTML = '<div class="hint">No presets match "' + escapeHtml(presetSearch.value) + '".</div>';
+      return;
+    }
+    var byCategory = {};
+    names.forEach(function (name) {
+      var cat = CATEGORY_MAP[name] || "Other";
+      byCategory[cat] = byCategory[cat] || [];
+      byCategory[cat].push(name);
+    });
+    var html = "";
+    Object.keys(byCategory).forEach(function (cat) {
+      html += '<div style="flex-basis:100%; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-faint); margin-top:12px">' + escapeHtml(cat) + "</div>";
+      byCategory[cat].forEach(function (name) {
+        var isSelected = selected.has(name);
+        html +=
+          '<button type="button" class="chip' +
+          (isSelected ? " selected" : "") +
+          '" data-preset="' +
+          escapeHtml(name) +
+          '">' +
+          (isSelected ? "✓ " : "") +
+          escapeHtml(name) +
+          "</button>";
+      });
+    });
+    presetChips.innerHTML = html;
+  }
+
+  function update() {
+    var names = Array.from(selected).sort();
+    selectedHint.textContent = names.length
+      ? "Selected: " + names.join(", ")
+      : "No presets selected — pick some above, or add your own patterns below.";
+
+    var sections = names.map(function (name) {
+      return "### " + name + "\n" + PRESETS[name];
+    });
+
+    var extra = extraPatterns.value
+      .split("\n")
+      .map(function (l) { return l.trim(); })
+      .filter(function (l) { return l.length > 0; });
+    if (extra.length) {
+      sections.push("### Custom\n" + extra.join("\n"));
+    }
+
+    output.textContent = sections.length ? sections.join("\n\n") : "";
+  }
+
+  presetSearch.addEventListener("input", renderChips);
+
+  presetChips.addEventListener("click", function (e) {
+    var chip = e.target.closest(".chip[data-preset]");
+    if (!chip) return;
+    var name = chip.getAttribute("data-preset");
+    if (selected.has(name)) selected.delete(name);
+    else selected.add(name);
+    renderChips();
+    update();
+  });
+
+  extraPatterns.addEventListener("input", update);
+
+  downloadBtn.addEventListener("click", function () {
+    var text = output.textContent;
+    if (!text.trim()) return;
+    var blob = new Blob([text + "\n"], { type: "application/octet-stream" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = ".gitignore";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    var target = document.getElementById(btn.getAttribute("data-copy-target"));
+    if (!target) return;
+    navigator.clipboard.writeText(target.textContent).then(function () {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1200);
+    });
+  });
+
+  renderChips();
+  update();
+})();
+</script>
+</body>
+</html>

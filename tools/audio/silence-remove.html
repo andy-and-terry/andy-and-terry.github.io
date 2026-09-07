@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Silence Remove — Audio Toolkit</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">🎧 Audio Toolkit</a>
+  <nav class="tool-nav" id="tool-nav"></nav>
+</header>
+
+<main>
+  <h1>Remove Silence</h1>
+  <p class="subtitle">Automatically trim leading, trailing, and internal silence. Runs entirely in your browser — nothing uploads anywhere.</p>
+
+  <div class="card">
+    <h2>1. Choose an audio file</h2>
+    <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Choose an audio file">
+      <div><strong>Click to choose</strong> or drag an audio file here</div>
+      <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.oga,.m4a,.aac,.flac,.wma,.opus,.aiff,.webm" hidden />
+    </div>
+    <div class="file-info" id="file-info" style="display:none">
+      <span id="file-name"></span>
+      <span id="file-size"></span>
+    </div>
+    <audio id="preview" class="preview" controls style="display:none"></audio>
+    <div class="waveform-wrap" id="waveform-wrap" style="display:none">
+      <canvas class="waveform" id="waveform" style="display:none"></canvas>
+      <div class="waveform-empty" id="waveform-empty" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="card" id="controls-card" style="display:none">
+    <h2>2. Silence detection</h2>
+    <div class="field">
+      <label>Threshold <span class="value-pill" id="threshold-pill">-30 dB</span></label>
+      <input type="range" id="threshold-range" min="-60" max="-10" step="1" value="-30" />
+      <div class="hint">Audio quieter than this is treated as silence. Lower (more negative) is more sensitive and will trim more.</div>
+    </div>
+    <div class="field">
+      <label>Minimum silence length <span class="value-pill" id="min-dur-pill">0.5s</span></label>
+      <input type="range" id="min-dur-range" min="0.1" max="2" step="0.1" value="0.5" />
+      <div class="hint">Gaps shorter than this are left alone so words and beats don't get chopped.</div>
+    </div>
+    <div class="field">
+      <label><input type="checkbox" id="internal-check" checked /> Also remove internal silence (not just start/end)</label>
+    </div>
+
+    <h2>3. Output</h2>
+    <div class="field">
+      <label>Output filename</label>
+      <input type="text" id="output-name" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="process-btn" type="button">Remove silence</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+    <div class="progress-track" id="progress-track" style="display:none">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div id="error-banner"></div>
+    <details class="log" id="log-details">
+      <summary>ffmpeg log</summary>
+      <pre id="log-output"></pre>
+    </details>
+  </div>
+
+  <div class="card output-card" id="output-card">
+    <h2>4. Result</h2>
+    <audio id="output-audio" class="preview" controls></audio>
+    <div class="file-info">
+      <span id="output-size"></span>
+      <span id="output-savings"></span>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-primary" id="download-link" download>Download</a>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">Runs locally via ffmpeg.wasm. No files leave your device.</footer>
+
+<script src="lib/ffmpeg.js"></script>
+<script src="lib/ffmpeg-util.js"></script>
+<script src="nav.js"></script>
+<script src="js/waveform.js"></script>
+<script src="js/silence-remove.js"></script>
+</body>
+</html>
