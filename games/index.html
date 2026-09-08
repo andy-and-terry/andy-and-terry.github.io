@@ -3,107 +3,46 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Tools</title>
-<style>
-  :root { color-scheme: light dark; }
-  body {
-    margin: 0;
-    font-family: system-ui, sans-serif;
-    background: #0f1115;
-    color: #e6e6e6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-  }
-  main { max-width: 640px; padding: 2rem; text-align: center; }
-  h1 { margin-bottom: 0.25rem; }
-  .subtitle { color: #9aa0a6; margin-top: 0; margin-bottom: 2rem; }
-  .tool-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-  }
-  .tool-card {
-    display: block;
-    padding: 1.5rem 1rem;
-    border-radius: 12px;
-    background: #1a1d24;
-    border: 1px solid #2a2e37;
-    text-decoration: none;
-    color: inherit;
-    transition: border-color 0.15s, transform 0.15s;
-  }
-  .tool-card:hover { border-color: #4a90e2; transform: translateY(-2px); }
-  .icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
-  .name { font-weight: 600; margin-bottom: 0.25rem; }
-  .desc { font-size: 0.85rem; color: #9aa0a6; }
-</style>
+<title>Game Library</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
+<nav class="site-nav">
+  <a href="index.html" class="active">Home</a>
+  <a href="#" aria-disabled="true" title="Coming soon">Categories</a>
+</nav>
+
+<header class="site-header">
+  <h1>🎮 Game Library</h1>
+  <p class="subtitle">Browser-based games. Everything runs locally in your tab — no accounts, no server.</p>
+</header>
+
 <main>
-  <h1>Tools</h1>
-  <p class="subtitle">Browser-based games. Everything runs locally — no accounts too.</p>
-  <p><small><i>Sorry! No games yet.</i></small></p>
-  <label for="progress">Games progress:</label>
-  <progress id="file-upload" max="100" value="0">0%</progress>
- <!--<div class="tool-grid">
-    <a class="tool-card" href="art/index.html">
-      <span class="icon">🧬</span>
-      <div class="name">Art Toolkit</div>
-      <div class="desc">Generative art tools powered by p5.js.</div>
-    </a>
-    <a class="tool-card" href="video/index.html">
-      <span class="icon">🎬</span>
-      <div class="name">Video Toolkit</div>
-      <div class="desc">Video editing tools powered by ffmpeg.wasm.</div>
-    </a>
-    <a class="tool-card" href="image/index.html">
-      <span class="icon">🖼️</span>
-      <div class="name">Image Toolkit</div>
-      <div class="desc">Browser-based image editing tools.</div>
-    </a>
-    <a class="tool-card" href="pdf/index.html">
-      <span class="icon">📄</span>
-      <div class="name">PDF Toolkit</div>
-      <div class="desc">Browser-based PDF tools powered by pdf-lib and pdf.js.</div>
-    </a>
-    <a class="tool-card" href="text/index.html">
-      <span class="icon">🧰</span>
-      <div class="name">Text Toolkit</div>
-      <div class="desc">Browser-based text and dev tools.</div>
-    </a>
-    <a class="tool-card" href="audio/index.html">
-      <span class="icon">🎧</span>
-      <div class="name">Audio Toolkit</div>
-      <div class="desc">Audio editing tools powered by ffmpeg.wasm.</div>
-    </a>
-    <a class="tool-card" href="media-extra/index.html">
-      <span class="icon">🧪</span>
-      <div class="name">Media Extras</div>
-      <div class="desc">GIF maker, audio extractor, screen recorder, and more.</div>
-    </a>
-    <a class="tool-card" href="misc/index.html">
-      <span class="icon">🔧</span>
-      <div class="name">Misc Toolkit</div>
-      <div class="desc">QR codes, barcodes, color tools, unit conversion, passwords, timestamps.</div>
-    </a>
-    <a class="tool-card" href="dev/index.html">
-      <span class="icon">🛠️</span>
-      <div class="name">Dev Toolkit</div>
-      <div class="desc">Browser-based dev/network tools.</div>
-    </a>
-    <a class="tool-card" href="bulk/index.html">
-      <span class="icon">📦</span>
-      <div class="name">Bulk Toolkit</div>
-      <div class="desc">Batch-run the video and art tools across many files at once.</div>
-    </a>
-    <a class="tool-card" href="productivity/index.html">
-      <span class="icon">✅</span>
-      <div class="name">Productivity Toolkit</div>
-      <div class="desc">Pomodoro, kanban, habits, timers, and a random picker.</div>
-    </a>
-  </div>-->
+  <div id="game-grid" class="game-grid"></div>
 </main>
+
+<footer class="page-footer">Runs locally in your browser.</footer>
+
+<script>
+  // Fetch the game list and render one card per entry, no manual HTML per game.
+  fetch("games.json")
+    .then((res) => res.json())
+    .then((games) => {
+      const grid = document.getElementById("game-grid");
+      games.forEach((game) => {
+        const card = document.createElement("a");
+        card.className = "game-card";
+        card.href = `${game.id}/index.html`;
+        card.innerHTML = `
+          <span class="thumb">${game.thumbnail}</span>
+          <div class="name">${game.title}</div>
+          <div class="desc">${game.description}</div>
+          <div class="play">Play →</div>
+        `;
+        grid.appendChild(card);
+      });
+    })
+    .catch((err) => console.error("Failed to load games.json", err));
+</script>
 </body>
 </html>
